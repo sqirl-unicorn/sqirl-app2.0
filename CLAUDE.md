@@ -190,23 +190,55 @@ For bug fixes: do NOT update Resolved Issues until user explicitly confirms the 
 
 ---
 
-## Architecture (To Be Defined)
+## Offline-First Data
 
-> This section will be populated as the architecture is decided. Placeholder structure below.
+- **All data is offline-first by default** unless explicitly specified otherwise
+- Every client (mobile, tablet, web, home automation, smart home) must function fully without network access
+- Data is stored locally on-device and **synced back to server when online**
+- Sync strategy: optimistic local writes → background sync queue → conflict resolution on reconnect
+- Conflict resolution default: **last-write-wins with server timestamp**; document deviations explicitly
+- Sync state must be visible to the user (syncing indicator, last-synced timestamp, error state)
+- Offline capability applies to: reads, writes, deletes, and reorders — all mutating operations queue locally
+- Local storage layers:
+  - Mobile/tablet: `AsyncStorage` (small KV) + `SQLite` (structured data via `expo-sqlite`)
+  - Web: `IndexedDB` (structured) + `localStorage` (auth tokens only)
+  - Home automation / smart home: `SQLite` or embedded key-value store as appropriate for the platform
+- Every sync-capable entity in the DB has: `updated_at`, `synced_at`, `client_id`, `is_deleted` (soft delete for sync)
+- Tests must cover: offline reads, offline writes, sync-on-reconnect, conflict scenarios
 
-### Tech Stack (Proposed)
-- **Backend**: Node.js + Express + PostgreSQL (Neon), TypeScript strict
-- **Web**: React 18 + Vite + TailwindCSS, react-router-dom v6, zustand
-- **Mobile**: React Native + Expo, expo-router, zustand
-- **Encryption**: TweetNaCl (secretbox symmetric, box asymmetric) — zero-knowledge server
-- **API**: Unified `/api/v1/` versioned REST, camelCase I/O
+---
+
+## Test Data Isolation
+
+- **All test users must have `is_test_user: true`** in the `users` table
+- **All test-generated data must have `is_test_data: true`** on every applicable table
+- Analytics, metrics, and reporting queries **always filter out** `is_test_user = true` and `is_test_data = true`
+- Test personas in `backend/tests/fixtures/personas.ts` always set these flags — never omit them
+- Seed scripts and factory functions must propagate `is_test_data: true` to all child records
+- Admin dashboard must display test-data counts separately (visible but excluded from real metrics)
+
+---
+
+## Architecture
+
+### Tech Stack
+- **Backend**: Node.js + Express + PostgreSQL (Neon hosted), TypeScript strict
+- **Web**: React 18 + Vite 7 + TailwindCSS 3, react-router-dom v6, zustand v4
+- **Mobile**: React Native 0.79+ + Expo 53, expo-router v5, zustand v4, expo-sqlite
+- **Encryption**: TweetNaCl (secretbox symmetric, box asymmetric) — zero-knowledge server; masterKey derived from password+salt
+- **Analytics**: Privacy-focused, offline queue with batch sending, opt-out support
+- **API**: Unified `/api/v1/` versioned REST, camelCase I/O, one API for all platforms
 
 ### Key Patterns
 - Backend returns `camelCase` for all API responses
+- PostgreSQL `DECIMAL` columns return strings — always wrap with `Number()` before `.toFixed()`
 - JWT in `Authorization: Bearer <token>` header
-- Route middleware: `authenticate` for protected routes
+- Route middleware: `authenticate` for protected routes; admin routes check whitelisted emails
 - All routes mounted at `/api/v1/*` in `backend/src/app.ts`
-- E2E encryption: masterKey derived from password+salt; server stores encrypted blobs only
+- Mobile navigation: Expo Router file-based routing with Stack navigator
+- Web navigation: react-router-dom with Layout wrapper
+- State management: zustand stores (in-memory; authStore persists to AsyncStorage/localStorage)
+- E2E encryption: masterKey derived from password+salt; server stores encrypted blobs only (zero-knowledge)
 
 ---
 
