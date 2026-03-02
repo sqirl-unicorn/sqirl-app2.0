@@ -15,7 +15,7 @@ import jwt from 'jsonwebtoken';
 
 export interface JwtPayload {
   userId: string;
-  email: string;
+  email: string | null; // null for phone-only accounts
 }
 
 // Extend Express Request to carry the decoded JWT payload
@@ -82,7 +82,7 @@ export function requireAdmin(
     .split(',')
     .map((e) => e.trim());
 
-  if (!req.user || !adminEmails.includes(req.user.email)) {
+  if (!req.user || !req.user.email || !adminEmails.includes(req.user.email)) {
     res.status(403).json({
       error: 'Admin access required',
       errorCode: 'SQIRL-AUTH-MW-003',

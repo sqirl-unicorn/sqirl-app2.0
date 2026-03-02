@@ -1,19 +1,18 @@
 /**
  * Global test setup/teardown helpers.
  *
- * Import in jest.setup or individual test files as needed.
- * Ensures:
- * - DB pool is alive before tests run
- * - All test data is cleaned up after each suite
- * - is_test_user / is_test_data filters are always in effect
+ * Ensures DB connectivity, cleans test data before/after suites.
+ * Two cleanup strategies:
+ *   cleanTestData()     — deletes rows with is_test_user = true (factory-created)
+ *   cleanTestDomain()   — deletes rows with test email/phone patterns (HTTP-registered)
+ * teardownTestDb() runs both.
  */
 
 import { pool } from '../../src/db';
 import { cleanTestData } from '../fixtures/factory';
 
 /**
- * Verify DB connectivity. Call in beforeAll of integration/e2e suites.
- * Throws with SQIRL-SYS-DB-001 if pool cannot reach the database.
+ * Verify DB connectivity. Throws SQIRL-SYS-DB-001 if unreachable.
  */
 export async function connectTestDb(): Promise<void> {
   try {
@@ -26,18 +25,30 @@ export async function connectTestDb(): Promise<void> {
 }
 
 /**
- * Tear down test data and close the DB pool.
- * Call in afterAll of integration/e2e suites that create test data.
+ * Delete users created via HTTP during tests (email ends in @test.sqirl.net
+ * or phone starts with +61412000). Handles leftovers from interrupted runs.
+ */
+export async function cleanTestDomain(): Promise<void> {
+  await pool.query(
+    `DELETE FROM users
+     WHERE email LIKE '%@test.sqirl.net'
+        OR phone LIKE '+61412000%'`
+  );
+}
+
+/**
+ * Tear down all test data (factory rows + HTTP-registered test users) and close pool.
+ * Call in afterAll of integration/e2e suites.
  */
 export async function teardownTestDb(): Promise<void> {
+  await cleanTestDomain();
   await cleanTestData();
   await pool.end();
 }
 
 /**
  * Close the DB pool without deleting test data.
- * Use in suites that only read (e.g., health checks) or when migrations
- * haven't run yet and the users table doesn't exist.
+ * Use in read-only suites (e.g. health check).
  */
 export async function closeTestDb(): Promise<void> {
   await pool.end();

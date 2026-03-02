@@ -25,8 +25,11 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', version: '2.0.0' });
 });
 
-// ── API Routes (mounted as they are built) ─────────────────────────────────
-// import authRouter from './routes/auth';
-// app.use('/api/v1/auth', authRouter);
+// ── API Routes ───────────────────────────────────────────────────────────────
+import authRouter from './routes/auth';
+import profileRouter from './routes/profile';
+
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/profile', profileRouter);
 
 export default app;
