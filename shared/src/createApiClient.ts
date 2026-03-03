@@ -25,6 +25,18 @@ import type {
   CopyScope,
   CopyRequestResponse,
   NotificationResponse,
+  ShoppingList,
+  ListItem,
+  TodoTask,
+  TodoSubtask,
+  CreateListPayload,
+  CreateListItemPayload,
+  UpdateListItemPayload,
+  CreateTodoTaskPayload,
+  UpdateTodoTaskPayload,
+  CreateTodoSubtaskPayload,
+  UpdateTodoSubtaskPayload,
+  ScanListResponse,
 } from './types';
 
 export function createApiClient(
@@ -171,6 +183,83 @@ export function createApiClient(
 
     declineInvitation(id: string): Promise<{ success: boolean }> {
       return request(`/invitations/${id}/decline`, { method: 'POST' });
+    },
+
+    // ── Lists ────────────────────────────────────────────────────────────────
+
+    getLists(): Promise<{ lists: ShoppingList[] }> {
+      return request('/lists');
+    },
+
+    createList(payload: CreateListPayload): Promise<{ list: ShoppingList }> {
+      return request('/lists', { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    renameList(id: string, name: string): Promise<{ list: ShoppingList }> {
+      return request(`/lists/${id}`, { method: 'PUT', body: JSON.stringify({ name }) });
+    },
+
+    deleteList(id: string): Promise<{ success: boolean }> {
+      return request(`/lists/${id}`, { method: 'DELETE' });
+    },
+
+    // ── List items (General + Grocery) ───────────────────────────────────────
+
+    getListItems(listId: string): Promise<{ items: ListItem[] }> {
+      return request(`/lists/${listId}/items`);
+    },
+
+    addListItem(listId: string, payload: CreateListItemPayload): Promise<{ item: ListItem }> {
+      return request(`/lists/${listId}/items`, { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    updateListItem(listId: string, itemId: string, payload: UpdateListItemPayload): Promise<{ item: ListItem }> {
+      return request(`/lists/${listId}/items/${itemId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    deleteListItem(listId: string, itemId: string): Promise<{ success: boolean }> {
+      return request(`/lists/${listId}/items/${itemId}`, { method: 'DELETE' });
+    },
+
+    moveListItem(itemId: string, targetListId: string): Promise<{ item: ListItem }> {
+      return request(`/lists/items/${itemId}/move`, { method: 'PUT', body: JSON.stringify({ targetListId }) });
+    },
+
+    /** Upload an image and get back parsed item descriptions. */
+    scanList(formData: FormData): Promise<ScanListResponse> {
+      return request('/lists/scan', { method: 'POST', body: formData, headers: {} });
+    },
+
+    // ── Todo tasks ───────────────────────────────────────────────────────────
+
+    getTasks(listId: string): Promise<{ tasks: TodoTask[] }> {
+      return request(`/lists/${listId}/tasks`);
+    },
+
+    addTask(listId: string, payload: CreateTodoTaskPayload): Promise<{ task: TodoTask }> {
+      return request(`/lists/${listId}/tasks`, { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    updateTask(listId: string, taskId: string, payload: UpdateTodoTaskPayload): Promise<{ task: TodoTask }> {
+      return request(`/lists/${listId}/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    deleteTask(listId: string, taskId: string): Promise<{ success: boolean }> {
+      return request(`/lists/${listId}/tasks/${taskId}`, { method: 'DELETE' });
+    },
+
+    // ── Todo subtasks ────────────────────────────────────────────────────────
+
+    addSubtask(listId: string, taskId: string, payload: CreateTodoSubtaskPayload): Promise<{ subtask: TodoSubtask }> {
+      return request(`/lists/${listId}/tasks/${taskId}/subtasks`, { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    updateSubtask(listId: string, taskId: string, subtaskId: string, payload: UpdateTodoSubtaskPayload): Promise<{ subtask: TodoSubtask }> {
+      return request(`/lists/${listId}/tasks/${taskId}/subtasks/${subtaskId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    deleteSubtask(listId: string, taskId: string, subtaskId: string): Promise<{ success: boolean }> {
+      return request(`/lists/${listId}/tasks/${taskId}/subtasks/${subtaskId}`, { method: 'DELETE' });
     },
 
     // ── Notifications ────────────────────────────────────────────────────────

@@ -2,10 +2,10 @@
  * Web app root — React Router setup.
  *
  * ProtectedRoute wraps authenticated pages with Layout (side nav + mobile nav).
- * Household pages replace placeholder divs now that they are implemented.
+ * Lists pages are now fully implemented; household pages retain their implementation.
  */
 
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { Layout } from './components/Layout';
@@ -14,6 +14,10 @@ import HouseholdPage from './pages/household/HouseholdPage';
 import InvitePage from './pages/household/InvitePage';
 import InvitationsPage from './pages/household/InvitationsPage';
 import ExitPage from './pages/household/ExitPage';
+import ListsPage from './pages/lists/ListsPage';
+import ListDetailPage from './pages/lists/ListDetailPage';
+import TodoDetailPage from './pages/lists/TodoDetailPage';
+import { useListsStore } from './store/listsStore';
 
 /** Redirects to /login when the user has no tokens */
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -30,6 +34,18 @@ function Placeholder({ title }: { title: string }) {
   );
 }
 
+/**
+ * Route-level guard: renders TodoDetailPage for todo lists and
+ * ListDetailPage for general/grocery lists. Reads list type from the store.
+ */
+function ListRouter() {
+  const { listId } = useParams<{ listId: string }>();
+  const lists = useListsStore((s) => s.lists);
+  const list = lists.find((l) => l.id === listId);
+  if (list?.listType === 'todo') return <TodoDetailPage />;
+  return <ListDetailPage />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -40,8 +56,8 @@ export default function App() {
 
         {/* Dashboard / Lists */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<PrivateRoute><Placeholder title="Lists" /></PrivateRoute>} />
-        <Route path="/list/:listId" element={<PrivateRoute><Placeholder title="List Detail" /></PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute><ListsPage /></PrivateRoute>} />
+        <Route path="/list/:listId" element={<PrivateRoute><ListRouter /></PrivateRoute>} />
 
         {/* Household */}
         <Route path="/household" element={<PrivateRoute><HouseholdPage /></PrivateRoute>} />

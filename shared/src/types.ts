@@ -108,6 +108,126 @@ export interface CopyRequestResponse {
   createdAt: string;
 }
 
+// ── Lists ─────────────────────────────────────────────────────────────────────
+
+export type ListType = 'general' | 'grocery' | 'todo';
+
+export interface ShoppingList {
+  id: string;
+  householdId: string | null;
+  ownerUserId: string;
+  name: string;
+  listType: ListType;
+  updatedAt: string;
+  isDeleted: boolean;
+  clientId: string | null;
+}
+
+export interface ListItem {
+  id: string;
+  listId: string;
+  description: string;
+  packSize: string | null;
+  unit: string | null;
+  quantity: number | null;
+  isPurchased: boolean;
+  position: number;
+  addedByUserId: string | null;
+  updatedAt: string;
+  isDeleted: boolean;
+  clientId: string | null;
+}
+
+export interface TodoTask {
+  id: string;
+  listId: string;
+  title: string;
+  dueDate: string | null;
+  isCompleted: boolean;
+  manualProgress: number | null;
+  useManualProgress: boolean;
+  /** Computed by server: completed subtasks / total subtasks * 100 (when useManualProgress=false) */
+  progress: number;
+  position: number;
+  addedByUserId: string | null;
+  updatedAt: string;
+  isDeleted: boolean;
+  clientId: string | null;
+  subtasks: TodoSubtask[];
+}
+
+export interface TodoSubtask {
+  id: string;
+  taskId: string;
+  title: string;
+  dueDate: string | null;
+  isCompleted: boolean;
+  position: number;
+  addedByUserId: string | null;
+  updatedAt: string;
+  isDeleted: boolean;
+  clientId: string | null;
+}
+
+export interface CreateListPayload {
+  name: string;
+  listType: ListType;
+  clientId?: string;
+}
+
+export interface CreateListItemPayload {
+  description: string;
+  packSize?: string;
+  unit?: string;
+  quantity?: number;
+  position?: number;
+  clientId?: string;
+}
+
+export interface UpdateListItemPayload {
+  description?: string;
+  packSize?: string | null;
+  unit?: string | null;
+  quantity?: number | null;
+  isPurchased?: boolean;
+  position?: number;
+}
+
+export interface CreateTodoTaskPayload {
+  title: string;
+  dueDate?: string;
+  position?: number;
+  clientId?: string;
+}
+
+export interface UpdateTodoTaskPayload {
+  title?: string;
+  dueDate?: string | null;
+  isCompleted?: boolean;
+  manualProgress?: number | null;
+  useManualProgress?: boolean;
+  position?: number;
+}
+
+export interface CreateTodoSubtaskPayload {
+  title: string;
+  dueDate?: string;
+  position?: number;
+  clientId?: string;
+}
+
+export interface UpdateTodoSubtaskPayload {
+  title?: string;
+  dueDate?: string | null;
+  isCompleted?: boolean;
+  position?: number;
+}
+
+/** Response from the scan endpoint: items parsed from an uploaded image */
+export interface ScanListResponse {
+  items: string[];
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationResponse {

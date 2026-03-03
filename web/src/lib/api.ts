@@ -31,5 +31,10 @@ export type {
   CopyScope,
   CopyRequestResponse,
   NotificationResponse,
+  ShoppingList,
+  ListItem,
+  TodoTask,
+  TodoSubtask,
+  ListType,
   ApiClient,
 } from '@sqirl/shared';

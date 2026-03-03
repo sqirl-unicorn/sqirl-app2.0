@@ -7,8 +7,14 @@
  * Error code: SQIRL-SYS-DB-001 (connection failure)
  */
 
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
 import dotenv from 'dotenv';
+
+// Parse DATE columns as plain strings (YYYY-MM-DD) rather than JavaScript Date
+// objects. Without this, pg converts DATE to a local-time JS Date which shifts
+// the value by the server's UTC offset when serialised to ISO string.
+// OID 1082 = DATE, OID 1114 = TIMESTAMP WITHOUT TIME ZONE
+types.setTypeParser(1082, (val: string) => val);
 
 dotenv.config();
 

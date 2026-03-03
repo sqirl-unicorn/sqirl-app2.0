@@ -29,6 +29,22 @@
  *   GET    /api/v1/notifications/unread-count
  *   PUT    /api/v1/notifications/read-all
  *   PUT    /api/v1/notifications/:id/read
+ *   GET    /api/v1/lists
+ *   POST   /api/v1/lists
+ *   PUT    /api/v1/lists/:listId
+ *   DELETE /api/v1/lists/:listId
+ *   GET    /api/v1/lists/:listId/items
+ *   POST   /api/v1/lists/:listId/items
+ *   PUT    /api/v1/lists/:listId/items/:itemId
+ *   DELETE /api/v1/lists/:listId/items/:itemId
+ *   PUT    /api/v1/lists/items/:itemId/move
+ *   GET    /api/v1/lists/:listId/tasks
+ *   POST   /api/v1/lists/:listId/tasks
+ *   PUT    /api/v1/lists/:listId/tasks/:taskId
+ *   DELETE /api/v1/lists/:listId/tasks/:taskId
+ *   POST   /api/v1/lists/:listId/tasks/:taskId/subtasks
+ *   PUT    /api/v1/lists/:listId/tasks/:taskId/subtasks/:subtaskId
+ *   DELETE /api/v1/lists/:listId/tasks/:taskId/subtasks/:subtaskId
  */
 
 import express, { Request, Response } from 'express';
@@ -51,11 +67,13 @@ import profileRouter from './routes/profile';
 import householdRouter from './routes/household';
 import invitationsRouter from './routes/invitations';
 import notificationsRouter from './routes/notifications';
+import listsRouter from './routes/lists';
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
 app.use('/api/v1/household', householdRouter);
 app.use('/api/v1/invitations', invitationsRouter);
 app.use('/api/v1/notifications', notificationsRouter);
+app.use('/api/v1/lists', listsRouter);
 
 export default app;
