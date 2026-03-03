@@ -25,6 +25,8 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `src/pages/lists/ListDetailPage.tsx` — items for General+Grocery lists; unpurchased + purchased sections; add/edit/delete/mark-purchased/move items; camera scan via file input
 - `src/pages/loyalty-cards/LoyaltyCardsPage.tsx` — inline barcode/QR grid; brand picker with search; JsBarcode (linear) + qrcode.react (QR); camera scan via BarcodeDetector API + file input; edit/delete per card; polls 30 s
 - `src/pages/lists/TodoDetailPage.tsx` — tasks + subtasks; progress bar (auto or manual); add/edit/delete tasks + subtasks; due date enforcement
+- `src/pages/gift-cards/GiftCardsPage.tsx` — Active/Archived tabs; card tiles (logo+balance); add modal (brand picker with search, card number+scan, balance, conditional PIN+expiry per brand rules, barcode format); polls 30 s
+- `src/pages/gift-cards/GiftCardDetailPage.tsx` — top half: logo, balance, expiry, masked/unmasked PIN; barcode/QR centred in second half; Update Balance modal; Add Transaction modal (amount,date,location,desc,addAsExpense); transaction history list; Archive + Delete actions
 
 ### Components
 - `src/components/Layout.tsx` — mobile header with `NotificationsBell`; `SideNav` for lg+
@@ -33,13 +35,24 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `src/components/NotificationsBell.tsx` — bell icon, red badge (unread count), click dropdown with mark-one/mark-all; closes on outside click
 
 ### App
-- `src/App.tsx` — Routes: /login, /register, /dashboard (ListsPage), /list/:listId (ListRouter→ListDetailPage|TodoDetailPage), /household/*, /invitations, /expenses, /loyalty-cards (LoyaltyCardsPage), /gift-cards
+- `src/App.tsx` — Routes: /login, /register, /dashboard (ListsPage), /list/:listId (ListRouter→ListDetailPage|TodoDetailPage), /household/*, /invitations, /expenses, /loyalty-cards (LoyaltyCardsPage), /gift-cards (GiftCardsPage), /gift-cards/:cardId (GiftCardDetailPage)
+- `src/store/giftCardsStore.ts` — `cards, activeCardId, transactions` + setters. In-memory only (no persistence).
 
 ## Design System
 - Fonts: Inter (body), Playfair Display (display) — Google Fonts
 - Colors: primary-400=#60a5fa (brand), recovery-50→900 (teal/sage, milder palette for recovery)
 - Golden ratio scale: φ-xs…φ-xl font sizes, φ-1…φ-7 spacing, φ-xs…φ-xl border-radius
 - Layout: white left panel (logo) + gray-50 right card (lg:w-[380-460px], rounded-l-3xl, shadow-xl)
+
+## E2E Tests (Playwright)
+- Config: `playwright.config.ts` — 3 projects: `setup`, `auth`, `app`; Chromium only; webServer auto-starts Vite
+- `e2e/auth.setup.ts` — login-or-register test user (`playwright.e2e@test.sqirl.net`), saves `e2e/.auth/user.json`
+- `e2e/auth.e2e.ts` — register flow (both steps), login error, phone toggle, duplicate email, skip recovery keys (9 tests)
+- `e2e/lists.e2e.ts` — create/rename/delete across all 3 tabs, cancel, navigate to detail (8 tests)
+- `e2e/gift-cards.e2e.ts` — add card, navigate to detail, update balance, add transaction, archive, archived tab, PIN masking, delete (8 tests)
+- `e2e/.gitignore` — ignores `.auth/` (contains JWT tokens)
+- Scripts: `test:e2e` (headless), `test:e2e:headed`, `test:e2e:ui`
+- Prerequisites: backend on :3000 must be running; Vite auto-started by config
 
 ## Recovery key UX
 - 5 independent keys; any one restores the account

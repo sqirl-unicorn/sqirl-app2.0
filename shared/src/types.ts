@@ -263,6 +263,73 @@ export interface UpdateLoyaltyCardPayload {
   notes?: string | null;
 }
 
+// ── Gift Cards ────────────────────────────────────────────────────────────────
+
+export interface GiftCard {
+  id: string;
+  householdId: string | null;
+  addedByUserId: string | null;
+  brandId: string;
+  cardNumber: string;
+  barcodeFormat: BarcodeFormat;
+  pin: string | null;
+  balance: number;
+  expiryDate: string | null;
+  notes: string | null;
+  isArchived: boolean;
+  updatedAt: string;
+  syncedAt: string | null;
+  clientId: string | null;
+  isDeleted: boolean;
+}
+
+export interface GiftCardTransaction {
+  id: string;
+  giftCardId: string;
+  userId: string;
+  type: 'balance_update' | 'spend' | 'reload';
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  transactionDate: string;
+  location: string | null;
+  description: string | null;
+  expenseId: string | null;
+  createdAt: string;
+}
+
+export interface CreateGiftCardPayload {
+  brandId: string;
+  cardNumber: string;
+  barcodeFormat?: BarcodeFormat;
+  pin?: string;
+  balance: number;
+  expiryDate?: string;
+  notes?: string;
+  clientId?: string;
+}
+
+export interface UpdateGiftCardPayload {
+  cardNumber?: string;
+  barcodeFormat?: BarcodeFormat;
+  pin?: string | null;
+  expiryDate?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateGiftCardBalancePayload {
+  newBalance: number;
+  note?: string;
+}
+
+export interface AddGiftCardTransactionPayload {
+  amount: number;
+  transactionDate: string;
+  location?: string;
+  description?: string;
+  addAsExpense?: boolean;
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationResponse {

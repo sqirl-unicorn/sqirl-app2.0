@@ -40,6 +40,12 @@ import type {
   LoyaltyCard,
   CreateLoyaltyCardPayload,
   UpdateLoyaltyCardPayload,
+  GiftCard,
+  GiftCardTransaction,
+  CreateGiftCardPayload,
+  UpdateGiftCardPayload,
+  UpdateGiftCardBalancePayload,
+  AddGiftCardTransactionPayload,
 } from './types';
 
 export function createApiClient(
@@ -299,6 +305,40 @@ export function createApiClient(
 
     deleteLoyaltyCard(cardId: string): Promise<{ success: boolean }> {
       return request(`/loyalty-cards/${cardId}`, { method: 'DELETE' });
+    },
+
+    // ── Gift Cards ────────────────────────────────────────────────────────────
+
+    getGiftCards(): Promise<{ cards: GiftCard[] }> {
+      return request('/gift-cards');
+    },
+
+    addGiftCard(payload: CreateGiftCardPayload): Promise<{ card: GiftCard }> {
+      return request('/gift-cards', { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    updateGiftCard(cardId: string, payload: UpdateGiftCardPayload): Promise<{ card: GiftCard }> {
+      return request(`/gift-cards/${cardId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    updateGiftCardBalance(cardId: string, payload: UpdateGiftCardBalancePayload): Promise<{ card: GiftCard; transaction: GiftCardTransaction }> {
+      return request(`/gift-cards/${cardId}/balance`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    addGiftCardTransaction(cardId: string, payload: AddGiftCardTransactionPayload): Promise<{ card: GiftCard; transaction: GiftCardTransaction; expenseId?: string }> {
+      return request(`/gift-cards/${cardId}/transactions`, { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    getGiftCardTransactions(cardId: string): Promise<{ transactions: GiftCardTransaction[] }> {
+      return request(`/gift-cards/${cardId}/transactions`);
+    },
+
+    archiveGiftCard(cardId: string): Promise<{ card: GiftCard }> {
+      return request(`/gift-cards/${cardId}/archive`, { method: 'PUT' });
+    },
+
+    deleteGiftCard(cardId: string): Promise<{ success: boolean }> {
+      return request(`/gift-cards/${cardId}`, { method: 'DELETE' });
     },
 
   };

@@ -23,6 +23,7 @@ export default function RootLayout() {
       <Stack.Screen name="household/exit" options={{ presentation: 'modal', headerShown: true, title: 'Exit Household' }} />
       <Stack.Screen name="list/items/[listId]" options={{ headerShown: true, title: 'List' }} />
       <Stack.Screen name="list/todo/[listId]" options={{ headerShown: true, title: 'To Do' }} />
+      <Stack.Screen name="gift-card/[cardId]" options={{ headerShown: true, title: 'Gift Card' }} />
     </Stack>
   );
 }

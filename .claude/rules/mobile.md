@@ -14,7 +14,9 @@ mobile/
       household.tsx       — Household screen
       expenses.tsx        — Expenses placeholder
       loyalty-cards.tsx   — Loyalty Cards: inline barcode/QR list; tap→fullscreen (barcode in bottom half); brand picker; expo-camera scan; edit/delete; polls 30 s
-      gift-cards.tsx      — Gift Cards placeholder
+      gift-cards.tsx      — Gift Cards: Active/Archived tabs; card tiles (logo+balance); add modal (brand picker, card number+expo-camera scan, balance, conditional PIN+expiry per brand rules); polls 30 s
+    gift-card/
+      [cardId].tsx        — Gift Card Detail: top half (logo,balance,expiry,masked PIN); barcode/QR SVG centred in second half; Update Balance modal; Add Transaction modal (amount,date,location,desc,addAsExpense Switch); transaction history; Archive + Delete actions
     household/
       invite.tsx          — Send invite modal (Stack screen)
       invitations.tsx     — Received invitations screen (Stack screen)
@@ -47,3 +49,14 @@ mobile/
 - Expo Router file-based routing with Stack navigator (root) + Tab navigator (main)
 - Household sub-screens (invite, invitations, exit) are Stack screens rendered as modals/push
 - Auth guard: `_layout.tsx` redirects to `/login` if no stored auth
+
+## E2E Tests (Maestro)
+- Run manually: `maestro test mobile/e2e/<flow>.yaml` (requires WSL2 + Android or macOS)
+- `mobile/e2e/_login_helper.yaml` — reusable login flow (included via `runFlow`)
+- `mobile/e2e/auth.yaml` — login success, login error
+- `mobile/e2e/register.yaml` — full two-step register flow
+- `mobile/e2e/lists.yaml` — create/delete across General, Grocery, To Do tabs
+- `mobile/e2e/loyalty-cards.yaml` — add card via brand picker, view barcode, delete
+- `mobile/e2e/gift-cards.yaml` — add card, view detail+barcode, update balance, add spend transaction, archive, verify archived tab
+- `mobile/e2e/household.yaml` — household tab, invite screen, invitations screen
+- Test user: `playwright.e2e@test.sqirl.net` / `E2eTestPass99!` (same as web setup)

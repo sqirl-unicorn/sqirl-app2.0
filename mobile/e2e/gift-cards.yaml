@@ -1,0 +1,86 @@
+# Gift Cards E2E flow — add card, view detail, update balance, add transaction, archive
+# Run: maestro test mobile/e2e/gift-cards.yaml
+appId: com.sqirl.app
+---
+- launchApp:
+    clearState: true
+- runFlow: _login_helper.yaml
+
+# Navigate to Gift Cards tab
+- tapOn: "Gifts"
+
+# ── Add a gift card ───────────────────────────────────────────────────────────
+
+- tapOn: "+ Add"
+
+# Brand picker: search and select Amazon
+- assertVisible: "Search brands"
+- tapOn: "Search brands"
+- inputText: "Amazon"
+- tapOn: "Amazon"
+
+# Fill card number
+- assertVisible: "Card number"
+- tapOn: "Card number"
+- inputText: "AMZN-E2E-001"
+
+# Fill opening balance
+- tapOn: "Opening balance"
+- inputText: "75"
+
+# Submit
+- tapOn: "Add Gift Card"
+
+# Card appears in Active list
+- assertVisible: "Amazon"
+- assertVisible: "$75.00"
+
+# ── View card detail ──────────────────────────────────────────────────────────
+
+- tapOn: "Amazon"
+- assertVisible: "$75.00"
+- assertVisible: "AMZN-E2E-001"
+- assertVisible: "Update Balance"
+- assertVisible: "Add Transaction"
+- assertVisible: "Transaction History"
+
+# ── Update balance ────────────────────────────────────────────────────────────
+
+- tapOn: "Update Balance"
+- assertVisible: "New balance"
+- clearText
+- inputText: "60"
+- tapOn: "Save"
+
+# Balance updated on screen
+- assertVisible: "$60.00"
+- assertVisible: "balance update"
+
+# ── Add transaction (spend) ───────────────────────────────────────────────────
+
+- tapOn: "Add Transaction"
+- assertVisible: "Amount"
+- tapOn: "Amount"
+- inputText: "-15"
+- tapOn: "Save Transaction"
+
+# Balance reflects deduction
+- assertVisible: "$45.00"
+- assertVisible: "spend"
+
+# ── Archive ───────────────────────────────────────────────────────────────────
+
+- tapOn: "Archive"
+- tapOn: "Archive"                         # confirm alert
+- assertVisible: "Archived"
+
+# ── Back to list: card shows in Archived tab ──────────────────────────────────
+
+- tapOn: "Gift Card"                       # header back or back button
+- tapOn: "Archived"
+- assertVisible: "Amazon"
+
+# ── Active tab shows no archived cards ───────────────────────────────────────
+
+- tapOn: "Active"
+- assertNotVisible: "Amazon"

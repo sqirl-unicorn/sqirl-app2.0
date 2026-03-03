@@ -49,6 +49,14 @@
  *   POST   /api/v1/loyalty-cards
  *   PUT    /api/v1/loyalty-cards/:cardId
  *   DELETE /api/v1/loyalty-cards/:cardId
+ *   GET    /api/v1/gift-cards
+ *   POST   /api/v1/gift-cards
+ *   PUT    /api/v1/gift-cards/:cardId
+ *   PUT    /api/v1/gift-cards/:cardId/balance
+ *   POST   /api/v1/gift-cards/:cardId/transactions
+ *   GET    /api/v1/gift-cards/:cardId/transactions
+ *   PUT    /api/v1/gift-cards/:cardId/archive
+ *   DELETE /api/v1/gift-cards/:cardId
  */
 
 import express, { Request, Response } from 'express';
@@ -73,6 +81,7 @@ import invitationsRouter from './routes/invitations';
 import notificationsRouter from './routes/notifications';
 import listsRouter from './routes/lists';
 import loyaltyCardsRouter from './routes/loyaltyCards';
+import giftCardsRouter from './routes/giftCards';
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
@@ -81,5 +90,6 @@ app.use('/api/v1/invitations', invitationsRouter);
 app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/lists', listsRouter);
 app.use('/api/v1/loyalty-cards', loyaltyCardsRouter);
+app.use('/api/v1/gift-cards', giftCardsRouter);
 
 export default app;

@@ -1,15 +1,16 @@
 # Backend Index — sqirl-app2
 
 ## Shared Package (`shared/src/`)
-- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`, `ShoppingList`, `ListItem`, `TodoTask`, `TodoSubtask`, `ListType`, `CreateListPayload`, `CreateListItemPayload`, `UpdateListItemPayload`, `CreateTodoTaskPayload`, `UpdateTodoTaskPayload`, `CreateTodoSubtaskPayload`, `UpdateTodoSubtaskPayload`, `ScanListResponse`, `BarcodeFormat`, `LoyaltyCard`, `CreateLoyaltyCardPayload`, `UpdateLoyaltyCardPayload`
+- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`, `ShoppingList`, `ListItem`, `TodoTask`, `TodoSubtask`, `ListType`, `CreateListPayload`, `CreateListItemPayload`, `UpdateListItemPayload`, `CreateTodoTaskPayload`, `UpdateTodoTaskPayload`, `CreateTodoSubtaskPayload`, `UpdateTodoSubtaskPayload`, `ScanListResponse`, `BarcodeFormat`, `LoyaltyCard`, `CreateLoyaltyCardPayload`, `UpdateLoyaltyCardPayload`, `GiftCard`, `GiftCardTransaction`, `CreateGiftCardPayload`, `UpdateGiftCardPayload`, `UpdateGiftCardBalancePayload`, `AddGiftCardTransactionPayload`
 - `createApiClient.ts` — `createApiClient(getToken, baseUrl)→ApiClient`; all API methods, platform-agnostic (pure fetch). Import via alias `@sqirl/shared`.
-- `index.ts` — barrel re-export of types + `createApiClient` + `ApiClient` type + `LOYALTY_BRANDS`, `getBrandsForCountry`, `getBrandById`, `LoyaltyBrand`
+- `index.ts` — barrel re-export of types + `createApiClient` + `ApiClient` type + `LOYALTY_BRANDS`, `getBrandsForCountry`, `getBrandById`, `LoyaltyBrand` + `GIFT_BRANDS`, `getGiftBrandsForCountry`, `getGiftBrandById`, `GiftBrand`
 - `loyaltyBrands.ts` — `LOYALTY_BRANDS[]` (150+ brands AU/CA/US/UK/EU); `getBrandsForCountry(code)→[]`; `getBrandById(id)→brand|undefined`
+- `giftBrands.ts` — `GIFT_BRANDS[]` (120+ retailers AU/CA/US/UK/EU); each brand has `requiresPin` + `requiresExpiry` for mandatory-field rules; `getGiftBrandsForCountry(code)→[]`; `getGiftBrandById(id)→brand|undefined`
 - Aliases: Vite→`vite.config.ts resolve.alias`; tsc→`paths` in each tsconfig; Metro→`metro.config.js extraNodeModules`
 
 ## Core Files
 - `src/db.ts` — `pool` (pg Pool, Neon, SSL). Errors: SQIRL-SYS-DB-001/002
-- `src/app.ts` — Express app. Routes: /health, /api/v1/auth/*, /api/v1/profile/*, /api/v1/household/*, /api/v1/invitations/*, /api/v1/notifications/*, /api/v1/lists/*, /api/v1/loyalty-cards/*
+- `src/app.ts` — Express app. Routes: /health, /api/v1/auth/*, /api/v1/profile/*, /api/v1/household/*, /api/v1/invitations/*, /api/v1/notifications/*, /api/v1/lists/*, /api/v1/loyalty-cards/*, /api/v1/gift-cards/*
 - `src/server.ts` — Entry point, DB check on startup
 
 ## Middleware
@@ -25,6 +26,7 @@
 - `src/routes/notifications.ts` — GET /, GET /unread-count, PUT /read-all, PUT /:id/read
 - `src/routes/lists.ts` — GET /, POST / (create), PUT /:listId (rename), DELETE /:listId; GET|POST /:listId/items, PUT|DELETE /:listId/items/:itemId, PUT /items/:itemId/move; GET|POST /:listId/tasks, PUT|DELETE /:listId/tasks/:taskId; POST|PUT|DELETE /:listId/tasks/:taskId/subtasks/:subtaskId
 - `src/routes/loyaltyCards.ts` — GET /, POST / (add), PUT /:cardId (update), DELETE /:cardId (soft-delete)
+- `src/routes/giftCards.ts` — GET /, POST / (add), PUT /:cardId (edit metadata), PUT /:cardId/balance (set balance+record txn), POST /:cardId/transactions (spend/reload), GET /:cardId/transactions, PUT /:cardId/archive, DELETE /:cardId (soft-delete)
 
 ## Services
 - `src/services/authService.ts` — hashPassword, verifyPassword, generateToken, decodeToken, createUser, findUserForLogin, findUserById, saveRecoveryKeySlots, updateUserProfile
@@ -40,6 +42,9 @@
 - `src/services/loyaltyCardService.ts`
   - Pure helpers: `isValidBarcodeFormat(format)→bool`, `canAccessCard(userId,hhId,card)→bool`
   - DB ops: `getCards(userId)`, `addCard(userId,brandId,cardNumber,format,notes?,clientId?,isTest?)`, `updateCard(cardId,userId,fields)`, `deleteCard(cardId,userId)`
+- `src/services/giftCardService.ts`
+  - Pure helpers: `isValidGiftBarcodeFormat(format)→bool`, `canAccessGiftCard(userId,hhId,card)→bool`, `computeTransactionType(amount)→TransactionType`
+  - DB ops: `getGiftCards(userId)`, `addGiftCard(userId,brandId,cardNumber,format,balance,pin?,expiry?,notes?,clientId?,isTest?)`, `updateGiftCard(cardId,userId,fields)`, `updateGiftCardBalance(cardId,userId,newBalance,note?)→{card,transaction}`, `addGiftCardTransaction(cardId,userId,amount,date,location?,desc?,addAsExpense?,isTest?)→{card,transaction,expenseId?}`, `getGiftCardTransactions(cardId,userId)`, `archiveGiftCard(cardId,userId)`, `deleteGiftCard(cardId,userId)`
 
 ## Migrations
 - `001-users.sql` — users table (id,email,phone,first_name,last_name,password_hash,public_key,encrypted_private_key,salt,country,recovery_key_slots,is_admin,is_test_user,created_at,updated_at,client_id,is_deleted)
@@ -51,6 +56,7 @@
 - `007-lists.sql` — lists (id,household_id,owner_user_id,name,list_type,sync cols), list_items (description,pack_size,unit,quantity,is_purchased,position)
 - `008-todo-tasks.sql` — todo_tasks (title,due_date,is_completed,manual_progress,use_manual_progress), todo_subtasks (title,due_date,is_completed)
 - `009-loyalty-cards.sql` — loyalty_cards (household_id,added_by_user_id,brand_id,card_number,barcode_format CHECK,notes,sync cols)
+- `010-gift-cards.sql` — gift_cards (household_id,added_by_user_id,brand_id,card_number,barcode_format CHECK,pin,balance NUMERIC,expiry_date,notes,is_archived,sync cols); gift_card_transactions (gift_card_id,user_id,type CHECK spend|reload|balance_update,amount,balance_before,balance_after,transaction_date,location,description,expense_id)
 
 ## Test Files
 - `tests/unit/auth.middleware.test.ts`     — 9 tests
@@ -68,7 +74,10 @@
 - `tests/unit/loyaltyCard.service.test.ts`         — 17 tests
 - `tests/integration/loyaltyCards.routes.test.ts`  — 17 tests
 - `tests/e2e/loyaltyCards.e2e.test.ts`             — 18 tests
-Total: **247 tests passing**
+- `tests/unit/giftCard.service.test.ts`            — 17 tests
+- `tests/integration/giftCards.routes.test.ts`     — 28 tests
+- `tests/e2e/giftCards.e2e.test.ts`                — 24 tests
+Total: **316 tests passing**
 
 ## Test Infrastructure
 - `tests/fixtures/personas.ts` — 6 personas (alice/bob/carol/dave/eve/frank). All is_test_user:true.
@@ -129,3 +138,11 @@ Total: **247 tests passing**
 | SQIRL-LOYAL-CREATE-001 | loyaltyCards route | Missing required brandId or cardNumber |
 | SQIRL-LOYAL-CREATE-002 | loyaltyCards route / service | Invalid barcode format |
 | SQIRL-LOYAL-SERVER-001 | loyaltyCards route | Unexpected server error |
+| SQIRL-GIFT-ACCESS-001 | giftCardService | Card not found or user lacks access |
+| SQIRL-GIFT-CREATE-001 | giftCards route | Missing required brandId, cardNumber, or balance |
+| SQIRL-GIFT-CREATE-002 | giftCards route / service | Invalid barcode format |
+| SQIRL-GIFT-CREATE-003 | giftCards route | Balance must be a non-negative number |
+| SQIRL-GIFT-BAL-001 | giftCards route | New balance must be non-negative |
+| SQIRL-GIFT-TXN-001 | giftCards route | Transaction amount must be non-zero |
+| SQIRL-GIFT-TXN-002 | giftCards route | transactionDate is required |
+| SQIRL-GIFT-SERVER-001 | giftCards route | Unexpected server error |

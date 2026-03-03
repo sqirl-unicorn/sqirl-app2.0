@@ -18,6 +18,8 @@ import ListsPage from './pages/lists/ListsPage';
 import ListDetailPage from './pages/lists/ListDetailPage';
 import TodoDetailPage from './pages/lists/TodoDetailPage';
 import LoyaltyCardsPage from './pages/loyalty-cards/LoyaltyCardsPage';
+import GiftCardsPage from './pages/gift-cards/GiftCardsPage';
+import GiftCardDetailPage from './pages/gift-cards/GiftCardDetailPage';
 import { useListsStore } from './store/listsStore';
 
 /** Redirects to /login when the user has no tokens */
@@ -76,8 +78,8 @@ export default function App() {
         <Route path="/loyalty-cards" element={<PrivateRoute><LoyaltyCardsPage /></PrivateRoute>} />
 
         {/* Gift Cards */}
-        <Route path="/gift-cards" element={<PrivateRoute><Placeholder title="Gift Cards — Active" /></PrivateRoute>} />
-        <Route path="/gift-cards/archived" element={<PrivateRoute><Placeholder title="Gift Cards — Archived" /></PrivateRoute>} />
+        <Route path="/gift-cards" element={<PrivateRoute><GiftCardsPage /></PrivateRoute>} />
+        <Route path="/gift-cards/:cardId" element={<PrivateRoute><GiftCardDetailPage /></PrivateRoute>} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
