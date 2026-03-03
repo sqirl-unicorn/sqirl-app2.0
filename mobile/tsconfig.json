@@ -3,7 +3,10 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sqirl/shared": ["../shared/src/index.ts"],
+      "@sqirl/shared/*": ["../shared/src/*"]
     }
-  }
+  },
+  "include": ["src", "app", "../shared/src"]
 }
