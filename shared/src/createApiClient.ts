@@ -37,6 +37,9 @@ import type {
   CreateTodoSubtaskPayload,
   UpdateTodoSubtaskPayload,
   ScanListResponse,
+  LoyaltyCard,
+  CreateLoyaltyCardPayload,
+  UpdateLoyaltyCardPayload,
 } from './types';
 
 export function createApiClient(
@@ -278,6 +281,24 @@ export function createApiClient(
 
     markAllNotificationsRead(): Promise<{ success: boolean }> {
       return request('/notifications/read-all', { method: 'PUT' });
+    },
+
+    // ── Loyalty Cards ────────────────────────────────────────────────────────
+
+    getLoyaltyCards(): Promise<{ cards: LoyaltyCard[] }> {
+      return request('/loyalty-cards');
+    },
+
+    addLoyaltyCard(payload: CreateLoyaltyCardPayload): Promise<{ card: LoyaltyCard }> {
+      return request('/loyalty-cards', { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    updateLoyaltyCard(cardId: string, payload: UpdateLoyaltyCardPayload): Promise<{ card: LoyaltyCard }> {
+      return request(`/loyalty-cards/${cardId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    deleteLoyaltyCard(cardId: string): Promise<{ success: boolean }> {
+      return request(`/loyalty-cards/${cardId}`, { method: 'DELETE' });
     },
 
   };

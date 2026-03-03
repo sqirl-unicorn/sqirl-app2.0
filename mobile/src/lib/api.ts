@@ -37,4 +37,9 @@ export type {
   TodoSubtask,
   ListType,
   ApiClient,
+  LoyaltyCard,
+  LoyaltyBrand,
+  BarcodeFormat,
+  CreateLoyaltyCardPayload,
+  UpdateLoyaltyCardPayload,
 } from '@sqirl/shared';

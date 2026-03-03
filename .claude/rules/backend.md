@@ -1,14 +1,15 @@
 # Backend Index — sqirl-app2
 
 ## Shared Package (`shared/src/`)
-- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`
+- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`, `ShoppingList`, `ListItem`, `TodoTask`, `TodoSubtask`, `ListType`, `CreateListPayload`, `CreateListItemPayload`, `UpdateListItemPayload`, `CreateTodoTaskPayload`, `UpdateTodoTaskPayload`, `CreateTodoSubtaskPayload`, `UpdateTodoSubtaskPayload`, `ScanListResponse`, `BarcodeFormat`, `LoyaltyCard`, `CreateLoyaltyCardPayload`, `UpdateLoyaltyCardPayload`
 - `createApiClient.ts` — `createApiClient(getToken, baseUrl)→ApiClient`; all API methods, platform-agnostic (pure fetch). Import via alias `@sqirl/shared`.
-- `index.ts` — barrel re-export of types + `createApiClient` + `ApiClient` type
+- `index.ts` — barrel re-export of types + `createApiClient` + `ApiClient` type + `LOYALTY_BRANDS`, `getBrandsForCountry`, `getBrandById`, `LoyaltyBrand`
+- `loyaltyBrands.ts` — `LOYALTY_BRANDS[]` (150+ brands AU/CA/US/UK/EU); `getBrandsForCountry(code)→[]`; `getBrandById(id)→brand|undefined`
 - Aliases: Vite→`vite.config.ts resolve.alias`; tsc→`paths` in each tsconfig; Metro→`metro.config.js extraNodeModules`
 
 ## Core Files
 - `src/db.ts` — `pool` (pg Pool, Neon, SSL). Errors: SQIRL-SYS-DB-001/002
-- `src/app.ts` — Express app. Routes: /health, /api/v1/auth/*, /api/v1/profile/*, /api/v1/household/*, /api/v1/invitations/*, /api/v1/notifications/*
+- `src/app.ts` — Express app. Routes: /health, /api/v1/auth/*, /api/v1/profile/*, /api/v1/household/*, /api/v1/invitations/*, /api/v1/notifications/*, /api/v1/lists/*, /api/v1/loyalty-cards/*
 - `src/server.ts` — Entry point, DB check on startup
 
 ## Middleware
@@ -22,15 +23,23 @@
 - `src/routes/household.ts` — GET /, PUT / (rename), POST /invite, GET /invitations (sent), POST /members/:id/promote|demote, DELETE /members/:id, POST /exit, GET|POST /copy-requests, PUT /copy-requests/:id/review
 - `src/routes/invitations.ts` — GET / (received), POST /:token/accept, POST /:id/decline
 - `src/routes/notifications.ts` — GET /, GET /unread-count, PUT /read-all, PUT /:id/read
+- `src/routes/lists.ts` — GET /, POST / (create), PUT /:listId (rename), DELETE /:listId; GET|POST /:listId/items, PUT|DELETE /:listId/items/:itemId, PUT /items/:itemId/move; GET|POST /:listId/tasks, PUT|DELETE /:listId/tasks/:taskId; POST|PUT|DELETE /:listId/tasks/:taskId/subtasks/:subtaskId
+- `src/routes/loyaltyCards.ts` — GET /, POST / (add), PUT /:cardId (update), DELETE /:cardId (soft-delete)
 
 ## Services
 - `src/services/authService.ts` — hashPassword, verifyPassword, generateToken, decodeToken, createUser, findUserForLogin, findUserById, saveRecoveryKeySlots, updateUserProfile
 - `src/services/geoService.ts` — detectCountry, isValidCountry, getCountryName, getAllCountries
+- `src/services/listService.ts`
+  - Pure helpers: `computeProgress(subtasks)→int`, `validateSubtaskDueDate(s,t)→bool`, `canAccessList(userId,hhId,list)→bool`
+  - DB ops: `createList(userId,name,type,clientId,isTest)`, `getLists(userId)`, `renameList(id,userId,name)`, `deleteList(id,userId)`, `getItems(listId,userId)`, `addItem(...)`, `updateItem(listId,itemId,userId,fields)`, `deleteItem(listId,itemId,userId)`, `moveItem(itemId,targetListId,userId)`, `getTasks(listId,userId)`, `addTask(...)`, `updateTask(listId,taskId,userId,fields)`, `deleteTask(listId,taskId,userId)`, `addSubtask(...)`, `updateSubtask(listId,taskId,subtaskId,userId,fields)`, `deleteSubtask(...)`
 - `src/services/householdService.ts`
   - Pure helpers (exported): `validateInviteExpiry(days)→bool`, `defaultCopyScope()→CopyScope`, `validateCopyScope(s)→bool`, `canDemote(ownerCount)→bool`, `canRemove(role,ownerCount)→bool`
   - DB ops: `getHousehold(userId)`, `createHousehold(name,isTest)`, `addMember(hhId,userId,role,isTest)`, `getMembership(hhId,userId)`, `getMemberCount(hhId)`, `getOwnerCount(hhId)`, `renameHousehold(hhId,name)`, `promoteToOwner(hhId,userId)`, `demoteToMember(hhId,userId)`, `removeMember(hhId,userId)→{autoDeleted}`, `exitHousehold(userId)→{autoDeleted,householdId}`, `createInvitation(params)`, `getInvitationByToken(token)`, `getInvitationById(id)`, `acceptInvitation(token,userId,isTest)→{household,created}`, `declineInvitation(id)`, `getMyInvitations(userId)`, `getSentInvitations(hhId)`, `cancelAllInvitations(hhId)`, `createCopyRequest(hhId,requesterId,scope,isTest)`, `reviewCopyRequest(id,reviewerId,approved,scope?)`, `getPendingCopyRequests(hhId)`, `recordCopyGrant(params)`
 - `src/services/notificationService.ts`
   - `createNotification(userId,type,title,message,data?,isTest?)`, `notifyMany(userIds,...)`, `getNotifications(userId,unreadOnly?)`, `markRead(id,userId)`, `markAllRead(userId)`, `getUnreadCount(userId)`
+- `src/services/loyaltyCardService.ts`
+  - Pure helpers: `isValidBarcodeFormat(format)→bool`, `canAccessCard(userId,hhId,card)→bool`
+  - DB ops: `getCards(userId)`, `addCard(userId,brandId,cardNumber,format,notes?,clientId?,isTest?)`, `updateCard(cardId,userId,fields)`, `deleteCard(cardId,userId)`
 
 ## Migrations
 - `001-users.sql` — users table (id,email,phone,first_name,last_name,password_hash,public_key,encrypted_private_key,salt,country,recovery_key_slots,is_admin,is_test_user,created_at,updated_at,client_id,is_deleted)
@@ -39,6 +48,9 @@
 - `004-household-invitations.sql` — household_invitations (household_id nullable for founding invite)
 - `005-notifications.sql` — notifications (user_id,type,title,message,data JSONB,read)
 - `006-household-copy-requests-and-grants.sql` — household_copy_requests + household_copy_grants
+- `007-lists.sql` — lists (id,household_id,owner_user_id,name,list_type,sync cols), list_items (description,pack_size,unit,quantity,is_purchased,position)
+- `008-todo-tasks.sql` — todo_tasks (title,due_date,is_completed,manual_progress,use_manual_progress), todo_subtasks (title,due_date,is_completed)
+- `009-loyalty-cards.sql` — loyalty_cards (household_id,added_by_user_id,brand_id,card_number,barcode_format CHECK,notes,sync cols)
 
 ## Test Files
 - `tests/unit/auth.middleware.test.ts`     — 9 tests
@@ -50,7 +62,13 @@
 - `tests/integration/profile.routes.test.ts`       — 7 tests
 - `tests/integration/household.routes.test.ts`     — 30 tests
 - `tests/integration/notifications.routes.test.ts` — 8 tests
-Total: **102 tests passing** (plus 12 sub-assertions = 114 reported)
+- `tests/unit/list.service.test.ts`                — 13 tests
+- `tests/integration/lists.routes.test.ts`         — 41 tests
+- `tests/e2e/lists.e2e.test.ts`                    — 27 tests
+- `tests/unit/loyaltyCard.service.test.ts`         — 17 tests
+- `tests/integration/loyaltyCards.routes.test.ts`  — 17 tests
+- `tests/e2e/loyaltyCards.e2e.test.ts`             — 18 tests
+Total: **247 tests passing**
 
 ## Test Infrastructure
 - `tests/fixtures/personas.ts` — 6 personas (alice/bob/carol/dave/eve/frank). All is_test_user:true.
@@ -93,3 +111,21 @@ Total: **102 tests passing** (plus 12 sub-assertions = 114 reported)
 | SQIRL-HH-COPY-002 | householdService | Copy request not found or already reviewed |
 | SQIRL-HH-SERVER-001 | household/invitations routes | Unexpected server error |
 | SQIRL-NOTIFY-001 | notificationService | Failed to insert notification (logged only) |
+| SQIRL-LIST-ACCESS-001 | listService | List not found or user lacks access |
+| SQIRL-LIST-CREATE-001 | listService | Missing required name |
+| SQIRL-LIST-CREATE-002 | listService | Invalid list type |
+| SQIRL-LIST-ITEM-001 | listService | Item not found in list |
+| SQIRL-LIST-ITEM-002 | listService | Missing item description |
+| SQIRL-LIST-ITEM-003 | listService | Source and target list must be the same type |
+| SQIRL-LIST-MOVE-001 | listService | Target list not found or inaccessible |
+| SQIRL-LIST-TASK-001 | listService | Task not found in list |
+| SQIRL-LIST-TASK-002 | listService | Missing task title |
+| SQIRL-LIST-TASK-003 | listService | Progress must be 0–100 |
+| SQIRL-LIST-SUB-001 | listService | Subtask not found |
+| SQIRL-LIST-SUB-002 | listService | Missing subtask title |
+| SQIRL-LIST-SUB-003 | listService | Subtask due date cannot exceed task due date |
+| SQIRL-LIST-SERVER-001 | lists route | Unexpected server error |
+| SQIRL-LOYAL-ACCESS-001 | loyaltyCardService | Card not found or user lacks access |
+| SQIRL-LOYAL-CREATE-001 | loyaltyCards route | Missing required brandId or cardNumber |
+| SQIRL-LOYAL-CREATE-002 | loyaltyCards route / service | Invalid barcode format |
+| SQIRL-LOYAL-SERVER-001 | loyaltyCards route | Unexpected server error |

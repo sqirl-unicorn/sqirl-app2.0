@@ -17,6 +17,7 @@ import ExitPage from './pages/household/ExitPage';
 import ListsPage from './pages/lists/ListsPage';
 import ListDetailPage from './pages/lists/ListDetailPage';
 import TodoDetailPage from './pages/lists/TodoDetailPage';
+import LoyaltyCardsPage from './pages/loyalty-cards/LoyaltyCardsPage';
 import { useListsStore } from './store/listsStore';
 
 /** Redirects to /login when the user has no tokens */
@@ -72,7 +73,7 @@ export default function App() {
         <Route path="/expenses/categories" element={<PrivateRoute><Placeholder title="Categories" /></PrivateRoute>} />
 
         {/* Loyalty Cards */}
-        <Route path="/loyalty-cards" element={<PrivateRoute><Placeholder title="Loyalty Cards" /></PrivateRoute>} />
+        <Route path="/loyalty-cards" element={<PrivateRoute><LoyaltyCardsPage /></PrivateRoute>} />
 
         {/* Gift Cards */}
         <Route path="/gift-cards" element={<PrivateRoute><Placeholder title="Gift Cards — Active" /></PrivateRoute>} />

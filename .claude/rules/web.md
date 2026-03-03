@@ -12,6 +12,7 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 ### Stores
 - `src/store/authStore.ts` — `user, tokens, encryptedPrivateKey, salt` (persisted to localStorage). `masterKey` (in-memory only, never persisted).
 - `src/store/householdStore.ts` — `household, receivedInvitations, notifications, unreadCount` + setters. In-memory only (no persistence).
+- `src/store/listsStore.ts` — `lists, activeListId, items, tasks` + setters. In-memory; polls 30 s for household updates.
 
 ### Pages
 - `src/pages/Login.tsx` — email/phone toggle + password. Split-screen design.
@@ -20,6 +21,10 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `src/pages/household/InvitePage.tsx` — email/phone toggle, expiry slider 1–30 days, founding vs. existing household detection; sent confirmation state
 - `src/pages/household/InvitationsPage.tsx` — pending received invitations list, accept/decline; warning if already in a household
 - `src/pages/household/ExitPage.tsx` — step flow: choose→scope→pending→done; must-promote-first guard; copy scope selectors for lists/giftCards/loyaltyCards/expenses
+- `src/pages/lists/ListsPage.tsx` — 3-tab (General/Grocery/To Do) list dashboard; create/rename/delete lists; navigates to detail
+- `src/pages/lists/ListDetailPage.tsx` — items for General+Grocery lists; unpurchased + purchased sections; add/edit/delete/mark-purchased/move items; camera scan via file input
+- `src/pages/loyalty-cards/LoyaltyCardsPage.tsx` — inline barcode/QR grid; brand picker with search; JsBarcode (linear) + qrcode.react (QR); camera scan via BarcodeDetector API + file input; edit/delete per card; polls 30 s
+- `src/pages/lists/TodoDetailPage.tsx` — tasks + subtasks; progress bar (auto or manual); add/edit/delete tasks + subtasks; due date enforcement
 
 ### Components
 - `src/components/Layout.tsx` — mobile header with `NotificationsBell`; `SideNav` for lg+
@@ -28,7 +33,7 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `src/components/NotificationsBell.tsx` — bell icon, red badge (unread count), click dropdown with mark-one/mark-all; closes on outside click
 
 ### App
-- `src/App.tsx` — Routes: /login, /register, /dashboard, /household, /household/invite, /invitations, /household/exit (all household routes under PrivateRoute)
+- `src/App.tsx` — Routes: /login, /register, /dashboard (ListsPage), /list/:listId (ListRouter→ListDetailPage|TodoDetailPage), /household/*, /invitations, /expenses, /loyalty-cards (LoyaltyCardsPage), /gift-cards
 
 ## Design System
 - Fonts: Inter (body), Playfair Display (display) — Google Fonts

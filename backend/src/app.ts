@@ -45,6 +45,10 @@
  *   POST   /api/v1/lists/:listId/tasks/:taskId/subtasks
  *   PUT    /api/v1/lists/:listId/tasks/:taskId/subtasks/:subtaskId
  *   DELETE /api/v1/lists/:listId/tasks/:taskId/subtasks/:subtaskId
+ *   GET    /api/v1/loyalty-cards
+ *   POST   /api/v1/loyalty-cards
+ *   PUT    /api/v1/loyalty-cards/:cardId
+ *   DELETE /api/v1/loyalty-cards/:cardId
  */
 
 import express, { Request, Response } from 'express';
@@ -68,6 +72,7 @@ import householdRouter from './routes/household';
 import invitationsRouter from './routes/invitations';
 import notificationsRouter from './routes/notifications';
 import listsRouter from './routes/lists';
+import loyaltyCardsRouter from './routes/loyaltyCards';
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
@@ -75,5 +80,6 @@ app.use('/api/v1/household', householdRouter);
 app.use('/api/v1/invitations', invitationsRouter);
 app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/lists', listsRouter);
+app.use('/api/v1/loyalty-cards', loyaltyCardsRouter);
 
 export default app;

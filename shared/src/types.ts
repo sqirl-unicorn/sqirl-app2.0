@@ -228,6 +228,41 @@ export interface ScanListResponse {
   items: string[];
 }
 
+// ── Loyalty Cards ──────────────────────────────────────────────────────────────
+
+export type BarcodeFormat =
+  | 'CODE128' | 'EAN13' | 'EAN8' | 'QR' | 'CODABAR'
+  | 'ITF' | 'CODE39' | 'UPC_A' | 'UPC_E' | 'PDF417'
+  | 'AZTEC' | 'DATA_MATRIX';
+
+export interface LoyaltyCard {
+  id: string;
+  householdId: string | null;
+  addedByUserId: string | null;
+  brandId: string;
+  cardNumber: string;
+  barcodeFormat: BarcodeFormat;
+  notes: string | null;
+  updatedAt: string;
+  syncedAt: string | null;
+  clientId: string | null;
+  isDeleted: boolean;
+}
+
+export interface CreateLoyaltyCardPayload {
+  brandId: string;
+  cardNumber: string;
+  barcodeFormat?: BarcodeFormat;
+  notes?: string;
+  clientId?: string;
+}
+
+export interface UpdateLoyaltyCardPayload {
+  cardNumber?: string;
+  barcodeFormat?: BarcodeFormat;
+  notes?: string | null;
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationResponse {
