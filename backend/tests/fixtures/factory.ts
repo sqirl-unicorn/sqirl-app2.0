@@ -101,8 +101,18 @@ export async function createTestUsers(
 
 /**
  * Delete all rows carrying is_test_user = true.
- * Cascades via FK constraints. Call in afterEach / afterAll.
+ * Nullifies non-cascading FK references to users before deleting to avoid constraint errors.
+ * Call in afterEach / afterAll.
  */
 export async function cleanTestData(): Promise<void> {
+  // Nullify reviewer/granter FKs that reference users without ON DELETE CASCADE
+  await pool.query(
+    `UPDATE household_copy_requests SET reviewed_by_user_id = NULL
+     WHERE reviewed_by_user_id IN (SELECT id FROM users WHERE is_test_user = true)`
+  );
+  await pool.query(
+    `UPDATE household_copy_grants SET granted_by_user_id = NULL
+     WHERE granted_by_user_id IN (SELECT id FROM users WHERE is_test_user = true)`
+  );
   await pool.query(`DELETE FROM users WHERE is_test_user = true`);
 }
