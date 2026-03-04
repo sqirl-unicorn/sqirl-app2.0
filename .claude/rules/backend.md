@@ -1,7 +1,7 @@
 # Backend Index — sqirl-app2
 
 ## Shared Package (`shared/src/`)
-- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`, `ShoppingList`, `ListItem`, `TodoTask`, `TodoSubtask`, `ListType`, `CreateListPayload`, `CreateListItemPayload`, `UpdateListItemPayload`, `CreateTodoTaskPayload`, `UpdateTodoTaskPayload`, `CreateTodoSubtaskPayload`, `UpdateTodoSubtaskPayload`, `ScanListResponse`, `BarcodeFormat`, `LoyaltyCard`, `CreateLoyaltyCardPayload`, `UpdateLoyaltyCardPayload`, `GiftCard`, `GiftCardTransaction`, `CreateGiftCardPayload`, `UpdateGiftCardPayload`, `UpdateGiftCardBalancePayload`, `AddGiftCardTransactionPayload`
+- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`, `ShoppingList`, `ListItem`, `TodoTask`, `TodoSubtask`, `ListType`, `CreateListPayload`, `CreateListItemPayload`, `UpdateListItemPayload`, `CreateTodoTaskPayload`, `UpdateTodoTaskPayload`, `CreateTodoSubtaskPayload`, `UpdateTodoSubtaskPayload`, `ScanListResponse`, `BarcodeFormat`, `LoyaltyCard`, `CreateLoyaltyCardPayload`, `UpdateLoyaltyCardPayload`, `GiftCard`, `GiftCardTransaction`, `CreateGiftCardPayload`, `UpdateGiftCardPayload`, `UpdateGiftCardBalancePayload`, `AddGiftCardTransactionPayload`, `ExpenseScope`, `ExpenseCategory`, `ExpenseBudget`, `Expense`, `CreateExpensePayload`, `UpdateExpensePayload`, `MoveExpensePayload`, `MoveCheckResult`, `SetBudgetPayload`, `CreateExpenseCategoryPayload`, `UpdateExpenseCategoryPayload`
 - `createApiClient.ts` — `createApiClient(getToken, baseUrl)→ApiClient`; all API methods, platform-agnostic (pure fetch). Import via alias `@sqirl/shared`.
 - `index.ts` — barrel re-export of types + `createApiClient` + `ApiClient` type + `LOYALTY_BRANDS`, `getBrandsForCountry`, `getBrandById`, `LoyaltyBrand` + `GIFT_BRANDS`, `getGiftBrandsForCountry`, `getGiftBrandById`, `GiftBrand`
 - `loyaltyBrands.ts` — `LOYALTY_BRANDS[]` (150+ brands AU/CA/US/UK/EU); `getBrandsForCountry(code)→[]`; `getBrandById(id)→brand|undefined`
@@ -27,6 +27,7 @@
 - `src/routes/lists.ts` — GET /, POST / (create), PUT /:listId (rename), DELETE /:listId; GET|POST /:listId/items, PUT|DELETE /:listId/items/:itemId, PUT /items/:itemId/move; GET|POST /:listId/tasks, PUT|DELETE /:listId/tasks/:taskId; POST|PUT|DELETE /:listId/tasks/:taskId/subtasks/:subtaskId
 - `src/routes/loyaltyCards.ts` — GET /, POST / (add), PUT /:cardId (update), DELETE /:cardId (soft-delete)
 - `src/routes/giftCards.ts` — GET /, POST / (add), PUT /:cardId (edit metadata), PUT /:cardId/balance (set balance+record txn), POST /:cardId/transactions (spend/reload), GET /:cardId/transactions, PUT /:cardId/archive, DELETE /:cardId (soft-delete)
+- `src/routes/expenses.ts` — GET /categories, POST /categories, PUT /categories/:id, DELETE /categories/:id, GET /budgets, PUT /budgets/:categoryId, POST /budgets/carry-forward, GET /, POST /, PUT /:id, DELETE /:id, GET /:id/move-check, POST /:id/move
 
 ## Services
 - `src/services/authService.ts` — hashPassword, verifyPassword, generateToken, decodeToken, createUser, findUserForLogin, findUserById, saveRecoveryKeySlots, updateUserProfile
@@ -42,6 +43,10 @@
 - `src/services/loyaltyCardService.ts`
   - Pure helpers: `isValidBarcodeFormat(format)→bool`, `canAccessCard(userId,hhId,card)→bool`
   - DB ops: `getCards(userId)`, `addCard(userId,brandId,cardNumber,format,notes?,clientId?,isTest?)`, `updateCard(cardId,userId,fields)`, `deleteCard(cardId,userId)`
+- `src/services/expenseService.ts`
+  - Constants: `SYSTEM_CATEGORY_IDS: ReadonlySet<string>` (7 deterministic UUIDs `00000000-0000-ec00-0000-00000000000{1-7}`)
+  - Pure helpers (exported): `isCategorySystem(id)→bool`, `canManageHouseholdCategory(role)→bool`, `validateCategoryDepth(parentLevel)→bool`, `buildCategoryTree(rows)→ExpenseCategory[]`, `computeMonthFirstDay(yearMonth)→Date`
+  - DB ops: `getCategories(userId,scope,hhId?)`, `createCategory(userId,parentId,name,iconName?,scope,hhId?,isTest?)`, `updateCategory(catId,userId,fields,scope,hhId?)`, `deleteCategory(catId,userId,scope,hhId?)`, `getBudgets(scope,userId,hhId?,yearMonth)` (lazy carry-forward on first GET), `setBudget(catId,scope,userId,hhId?,yearMonth,amount)`, `carryForwardBudgets(scope,userId,hhId?,fromMonth,toMonth)→count`, `getExpenses(userId,scope,hhId?,yearMonth)`, `addExpense(userId,scope,hhId?,payload,isTest?)`, `updateExpense(expId,userId,fields)`, `deleteExpense(expId,userId)`, `checkCategoryConflict(expId,targetScope,userId,hhId?)→MoveCheckResult`, `moveExpense(expId,userId,targetScope,targetCatId?)→Expense`
 - `src/services/giftCardService.ts`
   - Pure helpers: `isValidGiftBarcodeFormat(format)→bool`, `canAccessGiftCard(userId,hhId,card)→bool`, `computeTransactionType(amount)→TransactionType`
   - DB ops: `getGiftCards(userId)`, `addGiftCard(userId,brandId,cardNumber,format,balance,pin?,expiry?,notes?,clientId?,isTest?)`, `updateGiftCard(cardId,userId,fields)`, `updateGiftCardBalance(cardId,userId,newBalance,note?)→{card,transaction}`, `addGiftCardTransaction(cardId,userId,amount,date,location?,desc?,addAsExpense?,isTest?)→{card,transaction,expenseId?}`, `getGiftCardTransactions(cardId,userId)`, `archiveGiftCard(cardId,userId)`, `deleteGiftCard(cardId,userId)`
@@ -57,6 +62,9 @@
 - `008-todo-tasks.sql` — todo_tasks (title,due_date,is_completed,manual_progress,use_manual_progress), todo_subtasks (title,due_date,is_completed)
 - `009-loyalty-cards.sql` — loyalty_cards (household_id,added_by_user_id,brand_id,card_number,barcode_format CHECK,notes,sync cols)
 - `010-gift-cards.sql` — gift_cards (household_id,added_by_user_id,brand_id,card_number,barcode_format CHECK,pin,balance NUMERIC,expiry_date,notes,is_archived,sync cols); gift_card_transactions (gift_card_id,user_id,type CHECK spend|reload|balance_update,amount,balance_before,balance_after,transaction_date,location,description,expense_id)
+- `011-expense-categories.sql` — expense_categories (parent_id self-ref, household_id, owner_user_id, scope CHECK system|household|personal, name, level CHECK 1|2|3, icon_name, position, sync cols); seeds 7 system categories
+- `012-expense-budgets.sql` — expense_budgets (category_id, household_id, owner_user_id, scope, budget_month DATE, amount NUMERIC); partial unique indexes per scope (personal/household)
+- `013-expenses.sql` — expenses (household_id, owner_user_id, category_id, amount NUMERIC, description, expense_date DATE, pack_size, unit, quantity, business, location, notes, sync cols); adds FK constraint on gift_card_transactions.expense_id
 
 ## Test Files
 - `tests/unit/auth.middleware.test.ts`     — 9 tests
@@ -77,7 +85,10 @@
 - `tests/unit/giftCard.service.test.ts`            — 17 tests
 - `tests/integration/giftCards.routes.test.ts`     — 28 tests
 - `tests/e2e/giftCards.e2e.test.ts`                — 24 tests
-Total: **316 tests passing**
+- `tests/unit/expense.service.test.ts`             — 20 tests
+- `tests/integration/expenses.routes.test.ts`      — 28 tests
+- `tests/e2e/expenses.e2e.test.ts`                 — 15 tests
+Total: **404 tests passing**
 
 ## Test Infrastructure
 - `tests/fixtures/personas.ts` — 6 personas (alice/bob/carol/dave/eve/frank). All is_test_user:true.
@@ -146,3 +157,16 @@ Total: **316 tests passing**
 | SQIRL-GIFT-TXN-001 | giftCards route | Transaction amount must be non-zero |
 | SQIRL-GIFT-TXN-002 | giftCards route | transactionDate is required |
 | SQIRL-GIFT-SERVER-001 | giftCards route | Unexpected server error |
+| SQIRL-EXP-ACCESS-001 | expenseService | Expense not found or no access |
+| SQIRL-EXP-CREATE-001 | expenses route | Missing required fields (description, date, amount, category) |
+| SQIRL-EXP-CREATE-002 | expenses route | Amount must be a positive number |
+| SQIRL-EXP-CAT-001 | expenseService | Category not found |
+| SQIRL-EXP-CAT-002 | expenseService | Cannot modify or delete a system category |
+| SQIRL-EXP-CAT-003 | expenseService | Category depth limit reached (max 3 levels) |
+| SQIRL-EXP-CAT-004 | expenses route | Household owner required to manage household categories |
+| SQIRL-EXP-BUDGET-001 | expenses route / expenseService | Budget month format invalid (use YYYY-MM) |
+| SQIRL-EXP-BUDGET-002 | expenses route | Budget amount must be non-negative |
+| SQIRL-EXP-MOVE-001 | expenseService | No household found — cannot move to household scope |
+| SQIRL-EXP-MOVE-002 | expenseService | Category mismatch: targetCategoryId required |
+| SQIRL-EXP-MOVE-003 | expenses route | Only household owners can push HH→personal |
+| SQIRL-EXP-SERVER-001 | expenses route | Unexpected server error |

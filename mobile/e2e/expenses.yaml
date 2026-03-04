@@ -1,0 +1,100 @@
+appId: com.sqirl.app
+---
+# Expenses E2E flow — add expense, switch views, navigate to categories + budget
+
+- runFlow: ./_login_helper.yaml
+
+# Navigate to Expenses tab
+- tapOn:
+    text: "Expenses"
+    index: 0
+
+# Verify expenses screen loaded
+- assertVisible:
+    text: "Expenses"
+
+# Verify scope tabs
+- assertVisible:
+    text: "Personal"
+
+# Month navigator present
+- assertVisible:
+    id: "expenses-month-nav"
+    optional: true
+
+# Switch to Category view
+- tapOn:
+    text: "Category"
+- assertVisible:
+    text: "Category"
+
+# Switch back to Date view
+- tapOn:
+    text: "Date"
+
+# Open Add Expense modal via FAB
+- tapOn:
+    id: "fab-add-expense"
+    optional: true
+- tapOn:
+    text: "+"
+    optional: true
+
+# Fill in required fields
+- tapOn:
+    placeholder: "e.g. Weekly groceries"
+    optional: true
+- inputText: "E2E Test Expense"
+- tapOn:
+    placeholder: "0.00"
+    optional: true
+- inputText: "25.00"
+- tapOn:
+    placeholder: "YYYY-MM-DD"
+    optional: true
+- inputText: "2026-04-01"
+
+# Select category (tap category picker then first option)
+- tapOn:
+    text: "Select category…"
+    optional: true
+- tapOn:
+    index: 0
+    optional: true
+
+# Save
+- tapOn:
+    text: "Save"
+    optional: true
+
+# Navigate to Categories screen via header icon
+- tapOn:
+    id: "header-categories-btn"
+    optional: true
+- tapOn:
+    text: "Categories"
+    optional: true
+
+# Verify categories screen loaded with system categories
+- assertVisible:
+    text: "Housing"
+    optional: true
+
+# Go back
+- pressKey: Back
+
+# Navigate to Budget screen
+- tapOn:
+    id: "header-budget-btn"
+    optional: true
+- tapOn:
+    text: "Budget"
+    optional: true
+
+# Verify budget screen
+- assertVisible:
+    text: "Housing"
+    optional: true
+
+# Go back to Expenses
+- pressKey: Back

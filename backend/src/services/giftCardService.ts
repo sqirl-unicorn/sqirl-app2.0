@@ -419,16 +419,15 @@ export async function addGiftCardTransaction(
     if (addAsExpense && type === 'spend') {
       try {
         const expenseRes = await client.query<{ id: string }>(
-          `INSERT INTO personal_expenses
-             (user_id, amount, description, expense_date, source, source_ref_id, is_test_data)
-           VALUES ($1, $2, $3, $4, 'gift_card', $5, $6)
+          `INSERT INTO expenses
+             (owner_user_id, amount, description, expense_date, is_test_data)
+           VALUES ($1, $2, $3, $4, $5)
            RETURNING id`,
           [
             userId,
             Math.abs(amount),
             description ?? `Gift card spend — ${card.brand_id}`,
             transactionDate,
-            cardId,
             isTest ?? card.is_test_data,
           ]
         );

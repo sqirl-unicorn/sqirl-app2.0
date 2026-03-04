@@ -330,6 +330,111 @@ export interface AddGiftCardTransactionPayload {
   addAsExpense?: boolean;
 }
 
+// ── Expenses ──────────────────────────────────────────────────────────────────
+
+export type ExpenseScope = 'personal' | 'household';
+
+export interface ExpenseCategory {
+  id: string;
+  parentId: string | null;
+  householdId: string | null;
+  ownerUserId: string | null;
+  scope: 'system' | 'household' | 'personal';
+  name: string;
+  level: 1 | 2 | 3;
+  iconName: string | null;
+  position: number;
+  isDeleted: boolean;
+  children?: ExpenseCategory[];
+}
+
+export interface ExpenseBudget {
+  id: string;
+  categoryId: string;
+  householdId: string | null;
+  ownerUserId: string | null;
+  scope: ExpenseScope;
+  budgetMonth: string;
+  amount: number;
+}
+
+export interface Expense {
+  id: string;
+  householdId: string | null;
+  ownerUserId: string | null;
+  categoryId: string | null;
+  amount: number;
+  description: string;
+  expenseDate: string;
+  packSize: number | null;
+  unit: string | null;
+  quantity: number | null;
+  business: string | null;
+  location: string | null;
+  notes: string | null;
+  isDeleted: boolean;
+  updatedAt: string;
+  syncedAt: string | null;
+  clientId: string | null;
+}
+
+export interface CreateExpensePayload {
+  scope: ExpenseScope;
+  categoryId: string;
+  amount: number;
+  description: string;
+  expenseDate: string;
+  packSize?: number;
+  unit?: string;
+  quantity?: number;
+  business?: string;
+  location?: string;
+  notes?: string;
+  clientId?: string;
+}
+
+export interface UpdateExpensePayload {
+  categoryId?: string | null;
+  amount?: number;
+  description?: string;
+  expenseDate?: string;
+  packSize?: number | null;
+  unit?: string | null;
+  quantity?: number | null;
+  business?: string | null;
+  location?: string | null;
+  notes?: string | null;
+}
+
+export interface MoveExpensePayload {
+  targetScope: ExpenseScope;
+  targetCategoryId?: string;
+}
+
+export interface MoveCheckResult {
+  needsRemap: boolean;
+  suggestedCategories: ExpenseCategory[];
+}
+
+export interface SetBudgetPayload {
+  scope: ExpenseScope;
+  budgetMonth: string;
+  amount: number;
+}
+
+export interface CreateExpenseCategoryPayload {
+  parentId: string;
+  name: string;
+  iconName?: string;
+  scope: ExpenseScope;
+  clientId?: string;
+}
+
+export interface UpdateExpenseCategoryPayload {
+  name?: string;
+  iconName?: string | null;
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationResponse {

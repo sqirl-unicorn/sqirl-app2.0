@@ -18,6 +18,9 @@ import ListsPage from './pages/lists/ListsPage';
 import ListDetailPage from './pages/lists/ListDetailPage';
 import TodoDetailPage from './pages/lists/TodoDetailPage';
 import LoyaltyCardsPage from './pages/loyalty-cards/LoyaltyCardsPage';
+import ExpensesPage from './pages/expenses/ExpensesPage';
+import CategoriesPage from './pages/expenses/CategoriesPage';
+import BudgetPage from './pages/expenses/BudgetPage';
 import GiftCardsPage from './pages/gift-cards/GiftCardsPage';
 import GiftCardDetailPage from './pages/gift-cards/GiftCardDetailPage';
 import { useListsStore } from './store/listsStore';
@@ -70,9 +73,9 @@ export default function App() {
         <Route path="/invitations" element={<PrivateRoute><InvitationsPage /></PrivateRoute>} />
 
         {/* Expenses */}
-        <Route path="/expenses" element={<PrivateRoute><Placeholder title="Current Expenses" /></PrivateRoute>} />
-        <Route path="/expenses/budget" element={<PrivateRoute><Placeholder title="Budget" /></PrivateRoute>} />
-        <Route path="/expenses/categories" element={<PrivateRoute><Placeholder title="Categories" /></PrivateRoute>} />
+        <Route path="/expenses" element={<PrivateRoute><ExpensesPage /></PrivateRoute>} />
+        <Route path="/expenses/budget" element={<PrivateRoute><BudgetPage /></PrivateRoute>} />
+        <Route path="/expenses/categories" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
 
         {/* Loyalty Cards */}
         <Route path="/loyalty-cards" element={<PrivateRoute><LoyaltyCardsPage /></PrivateRoute>} />

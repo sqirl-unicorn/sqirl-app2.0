@@ -46,6 +46,17 @@ import type {
   UpdateGiftCardPayload,
   UpdateGiftCardBalancePayload,
   AddGiftCardTransactionPayload,
+  ExpenseCategory,
+  ExpenseBudget,
+  Expense,
+  ExpenseScope,
+  CreateExpensePayload,
+  UpdateExpensePayload,
+  MoveExpensePayload,
+  MoveCheckResult,
+  SetBudgetPayload,
+  CreateExpenseCategoryPayload,
+  UpdateExpenseCategoryPayload,
 } from './types';
 
 export function createApiClient(
@@ -339,6 +350,69 @@ export function createApiClient(
 
     deleteGiftCard(cardId: string): Promise<{ success: boolean }> {
       return request(`/gift-cards/${cardId}`, { method: 'DELETE' });
+    },
+
+    // ── Expenses — Categories ────────────────────────────────────────────────
+
+    getExpenseCategories(scope: ExpenseScope, householdId?: string): Promise<{ categories: ExpenseCategory[] }> {
+      const qs = householdId ? `?scope=${scope}&householdId=${householdId}` : `?scope=${scope}`;
+      return request(`/expenses/categories${qs}`);
+    },
+
+    createExpenseCategory(payload: CreateExpenseCategoryPayload): Promise<{ category: ExpenseCategory }> {
+      return request('/expenses/categories', { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    updateExpenseCategory(id: string, payload: UpdateExpenseCategoryPayload): Promise<{ category: ExpenseCategory }> {
+      return request(`/expenses/categories/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    deleteExpenseCategory(id: string): Promise<{ success: boolean }> {
+      return request(`/expenses/categories/${id}`, { method: 'DELETE' });
+    },
+
+    // ── Expenses — Budgets ───────────────────────────────────────────────────
+
+    getExpenseBudgets(scope: ExpenseScope, month: string, householdId?: string): Promise<{ budgets: ExpenseBudget[] }> {
+      const params = new URLSearchParams({ scope, month });
+      if (householdId) params.append('householdId', householdId);
+      return request(`/expenses/budgets?${params.toString()}`);
+    },
+
+    setExpenseBudget(categoryId: string, payload: SetBudgetPayload): Promise<{ budget: ExpenseBudget }> {
+      return request(`/expenses/budgets/${categoryId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    carryForwardExpenseBudgets(payload: { scope: ExpenseScope; fromMonth: string; toMonth: string }): Promise<{ count: number }> {
+      return request('/expenses/budgets/carry-forward', { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    // ── Expenses — CRUD ──────────────────────────────────────────────────────
+
+    getExpenses(scope: ExpenseScope, month: string, householdId?: string): Promise<{ expenses: Expense[] }> {
+      const params = new URLSearchParams({ scope, month });
+      if (householdId) params.append('householdId', householdId);
+      return request(`/expenses?${params.toString()}`);
+    },
+
+    addExpense(payload: CreateExpensePayload): Promise<{ expense: Expense }> {
+      return request('/expenses', { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    updateExpense(id: string, payload: UpdateExpensePayload): Promise<{ expense: Expense }> {
+      return request(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    },
+
+    deleteExpense(id: string): Promise<{ success: boolean }> {
+      return request(`/expenses/${id}`, { method: 'DELETE' });
+    },
+
+    checkExpenseMove(id: string, targetScope: ExpenseScope): Promise<MoveCheckResult> {
+      return request(`/expenses/${id}/move-check?targetScope=${targetScope}`);
+    },
+
+    moveExpense(id: string, payload: MoveExpensePayload): Promise<{ expense: Expense }> {
+      return request(`/expenses/${id}/move`, { method: 'POST', body: JSON.stringify(payload) });
     },
 
   };

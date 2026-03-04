@@ -24,6 +24,9 @@ export default function RootLayout() {
       <Stack.Screen name="list/items/[listId]" options={{ headerShown: true, title: 'List' }} />
       <Stack.Screen name="list/todo/[listId]" options={{ headerShown: true, title: 'To Do' }} />
       <Stack.Screen name="gift-card/[cardId]" options={{ headerShown: true, title: 'Gift Card' }} />
+      <Stack.Screen name="expenses/[expenseId]" options={{ headerShown: true, title: 'Expense' }} />
+      <Stack.Screen name="expenses/categories" options={{ headerShown: true, title: 'Categories' }} />
+      <Stack.Screen name="expenses/budget" options={{ headerShown: true, title: 'Budget' }} />
     </Stack>
   );
 }

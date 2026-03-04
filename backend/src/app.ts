@@ -57,6 +57,19 @@
  *   GET    /api/v1/gift-cards/:cardId/transactions
  *   PUT    /api/v1/gift-cards/:cardId/archive
  *   DELETE /api/v1/gift-cards/:cardId
+ *   GET    /api/v1/expenses/categories
+ *   POST   /api/v1/expenses/categories
+ *   PUT    /api/v1/expenses/categories/:id
+ *   DELETE /api/v1/expenses/categories/:id
+ *   GET    /api/v1/expenses/budgets
+ *   PUT    /api/v1/expenses/budgets/:categoryId
+ *   POST   /api/v1/expenses/budgets/carry-forward
+ *   GET    /api/v1/expenses
+ *   POST   /api/v1/expenses
+ *   PUT    /api/v1/expenses/:id
+ *   DELETE /api/v1/expenses/:id
+ *   GET    /api/v1/expenses/:id/move-check
+ *   POST   /api/v1/expenses/:id/move
  */
 
 import express, { Request, Response } from 'express';
@@ -82,6 +95,7 @@ import notificationsRouter from './routes/notifications';
 import listsRouter from './routes/lists';
 import loyaltyCardsRouter from './routes/loyaltyCards';
 import giftCardsRouter from './routes/giftCards';
+import expensesRouter from './routes/expenses';
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
@@ -91,5 +105,6 @@ app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/lists', listsRouter);
 app.use('/api/v1/loyalty-cards', loyaltyCardsRouter);
 app.use('/api/v1/gift-cards', giftCardsRouter);
+app.use('/api/v1/expenses', expensesRouter);
 
 export default app;

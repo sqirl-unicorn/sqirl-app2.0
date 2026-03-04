@@ -13,6 +13,7 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `src/store/authStore.ts` — `user, tokens, encryptedPrivateKey, salt` (persisted to localStorage). `masterKey` (in-memory only, never persisted).
 - `src/store/householdStore.ts` — `household, receivedInvitations, notifications, unreadCount` + setters. In-memory only (no persistence).
 - `src/store/listsStore.ts` — `lists, activeListId, items, tasks` + setters. In-memory; polls 30 s for household updates.
+- `src/store/expensesStore.ts` — `personalCategories, householdCategories, personalBudgets, householdBudgets, personalExpenses, householdExpenses, pendingSyncIds: Set<string>` + setters. In-memory only.
 
 ### Pages
 - `src/pages/Login.tsx` — email/phone toggle + password. Split-screen design.
@@ -27,6 +28,9 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `src/pages/lists/TodoDetailPage.tsx` — tasks + subtasks; progress bar (auto or manual); add/edit/delete tasks + subtasks; due date enforcement
 - `src/pages/gift-cards/GiftCardsPage.tsx` — Active/Archived tabs; card tiles (logo+balance); add modal (brand picker with search, card number+scan, balance, conditional PIN+expiry per brand rules, barcode format); polls 30 s
 - `src/pages/gift-cards/GiftCardDetailPage.tsx` — top half: logo, balance, expiry, masked/unmasked PIN; barcode/QR centred in second half; Update Balance modal; Add Transaction modal (amount,date,location,desc,addAsExpense); transaction history list; Archive + Delete actions
+- `src/pages/expenses/ExpensesPage.tsx` — scope tabs, month nav, summary bar (spent/budget progress), Date View (collapsible date rows + TransactionTable) + Category View (3-level expandable tree with progress bars); AddExpenseModal, EditExpenseModal, MoveModal, CategoryPicker; long-press multi-select; ⟳ pending sync badge; 30 s poll
+- `src/pages/expenses/CategoriesPage.tsx` — scope selector, recursive CategoryTreeNode; system cats read-only; custom cats: edit/delete/add sub-category with icon picker; household owner guard
+- `src/pages/expenses/BudgetPage.tsx` — month selector, scope selector, flat category table; inline budget amount edit → save on Enter; Carry Forward button
 
 ### Components
 - `src/components/Layout.tsx` — mobile header with `NotificationsBell`; `SideNav` for lg+
@@ -35,7 +39,7 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `src/components/NotificationsBell.tsx` — bell icon, red badge (unread count), click dropdown with mark-one/mark-all; closes on outside click
 
 ### App
-- `src/App.tsx` — Routes: /login, /register, /dashboard (ListsPage), /list/:listId (ListRouter→ListDetailPage|TodoDetailPage), /household/*, /invitations, /expenses, /loyalty-cards (LoyaltyCardsPage), /gift-cards (GiftCardsPage), /gift-cards/:cardId (GiftCardDetailPage)
+- `src/App.tsx` — Routes: /login, /register, /dashboard (ListsPage), /list/:listId (ListRouter→ListDetailPage|TodoDetailPage), /household/*, /invitations, /expenses (ExpensesPage), /expenses/budget (BudgetPage), /expenses/categories (CategoriesPage), /loyalty-cards (LoyaltyCardsPage), /gift-cards (GiftCardsPage), /gift-cards/:cardId (GiftCardDetailPage)
 - `src/store/giftCardsStore.ts` — `cards, activeCardId, transactions` + setters. In-memory only (no persistence).
 
 ## Design System
@@ -50,6 +54,7 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `e2e/auth.e2e.ts` — register flow (both steps), login error, phone toggle, duplicate email, skip recovery keys (9 tests)
 - `e2e/lists.e2e.ts` — create/rename/delete across all 3 tabs, cancel, navigate to detail (8 tests)
 - `e2e/gift-cards.e2e.ts` — add card, navigate to detail, update balance, add transaction, archive, archived tab, PIN masking, delete (8 tests)
+- `e2e/expenses.e2e.ts` — load personal tab, date/category view toggle, month nav, add expense modal, add personal expense, budget page (category table, carry forward, inline save), categories page (system cats visible, scope tabs)
 - `e2e/.gitignore` — ignores `.auth/` (contains JWT tokens)
 - Scripts: `test:e2e` (headless), `test:e2e:headed`, `test:e2e:ui`
 - Prerequisites: backend on :3000 must be running; Vite auto-started by config
