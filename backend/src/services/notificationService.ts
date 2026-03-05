@@ -9,6 +9,7 @@
  */
 
 import { pool } from '../db';
+import { broadcastToUser } from '../ws/wsServer';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,6 +88,8 @@ export async function createNotification(
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [userId, type, title, message, data ? JSON.stringify(data) : null, isTestData]
     );
+    // Push real-time signal so the bell badge updates immediately
+    broadcastToUser('notifications:changed', userId);
   } catch (err) {
     console.error('SQIRL-NOTIFY-001: Failed to insert notification', { userId, type, err });
   }

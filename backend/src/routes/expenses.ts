@@ -41,6 +41,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { pool } from '../db';
+import { broadcast } from '../ws/wsServer';
 import {
   getCategories,
   createCategory,
@@ -227,6 +228,7 @@ router.post('/categories', authenticate, async (req: Request, res: Response): Pr
       isTest
     );
     res.status(201).json({ category: categoryRowToApi(cat) });
+    broadcast('expenses:changed', userId, householdId ?? undefined);
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-CAT-001') {
@@ -272,6 +274,10 @@ router.put('/categories/:id', authenticate, async (req: Request, res: Response):
       iconName: typeof iconName === 'string' ? iconName : iconName === null ? null : undefined,
     });
     res.json({ category: categoryRowToApi(updated) });
+    void (async () => {
+      const hh = await resolveHousehold(req.user!.userId);
+      broadcast('expenses:changed', req.user!.userId, hh?.householdId ?? undefined);
+    })();
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-CAT-001') {
@@ -313,6 +319,10 @@ router.delete('/categories/:id', authenticate, async (req: Request, res: Respons
 
     await deleteCategory(id);
     res.json({ success: true });
+    void (async () => {
+      const hh = await resolveHousehold(req.user!.userId);
+      broadcast('expenses:changed', req.user!.userId, hh?.householdId ?? undefined);
+    })();
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-CAT-001') {
@@ -394,6 +404,7 @@ router.put('/budgets/:categoryId', authenticate, async (req: Request, res: Respo
     const isTest = !!(req as Request & { isTest?: boolean }).isTest;
     const budget = await setBudget(categoryId, scopeVal, userId, householdId, budgetMonth, amountNum, isTest);
     res.json({ budget: budgetToApi(budget) });
+    broadcast('expenses:changed', userId, householdId ?? undefined);
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-BUDGET-001') {
@@ -438,6 +449,7 @@ router.post('/budgets/carry-forward', authenticate, async (req: Request, res: Re
 
     const count = await carryForwardBudgets(scopeVal, userId, householdId, fromMonth as string, toMonth as string);
     res.json({ count });
+    broadcast('expenses:changed', userId, householdId ?? undefined);
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-BUDGET-001') {
@@ -537,6 +549,7 @@ router.post('/', authenticate, async (req: Request, res: Response): Promise<void
     }, isTest);
 
     res.status(201).json({ expense: expenseToApi(expense) });
+    broadcast('expenses:changed', userId, householdId ?? undefined);
   } catch (err) {
     console.error('[SQIRL-EXP-SERVER-001]', err);
     res.status(500).json({ error: 'Unexpected server error', errorCode: 'SQIRL-EXP-SERVER-001' });
@@ -576,8 +589,13 @@ router.put('/:id', authenticate, async (req: Request, res: Response): Promise<vo
     if (location   !== undefined) fields.location    = typeof location === 'string' ? location : null;
     if (notes      !== undefined) fields.notes       = typeof notes    === 'string' ? notes    : null;
 
-    const expense = await updateExpense(id, req.user!.userId, fields);
+    const userId = req.user!.userId;
+    const expense = await updateExpense(id, userId, fields);
     res.json({ expense: expenseToApi(expense) });
+    void (async () => {
+      const hh = await resolveHousehold(userId);
+      broadcast('expenses:changed', userId, hh?.householdId ?? undefined);
+    })();
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-ACCESS-001') {
@@ -593,8 +611,13 @@ router.put('/:id', authenticate, async (req: Request, res: Response): Promise<vo
 router.delete('/:id', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    await deleteExpense(id, req.user!.userId);
+    const userId = req.user!.userId;
+    await deleteExpense(id, userId);
     res.json({ success: true });
+    void (async () => {
+      const hh = await resolveHousehold(userId);
+      broadcast('expenses:changed', userId, hh?.householdId ?? undefined);
+    })();
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-ACCESS-001') {
@@ -692,6 +715,10 @@ router.post('/:id/move', authenticate, async (req: Request, res: Response): Prom
       typeof targetCategoryId === 'string' ? targetCategoryId : undefined
     );
     res.json({ expense: expenseToApi(expense) });
+    void (async () => {
+      const hh = await resolveHousehold(userId);
+      broadcast('expenses:changed', userId, hh?.householdId ?? undefined);
+    })();
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-EXP-ACCESS-001') {

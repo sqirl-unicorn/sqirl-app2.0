@@ -7,10 +7,11 @@
  * Polls every 30 s for real-time household updates.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useListsStore } from '../../store/listsStore';
+import * as wsClient from '../../lib/wsClient';
 import type { ShoppingList, ListType } from '@sqirl/shared';
 
 const TABS: { key: ListType; label: string }[] = [
@@ -28,7 +29,6 @@ export default function ListsPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchLists = useCallback(async () => {
     try {
@@ -44,11 +44,8 @@ export default function ListsPage() {
     setLoading(true);
     void fetchLists().finally(() => setLoading(false));
 
-    // Poll every 30 s for household real-time updates
-    pollingRef.current = setInterval(() => void fetchLists(), 30_000);
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
+    // Real-time updates via WebSocket invalidation (replaces 30 s polling)
+    return wsClient.on('lists:changed', () => void fetchLists());
   }, [fetchLists, setLoading]);
 
   const filtered = lists.filter((l) => l.listType === activeTab && !l.isDeleted);

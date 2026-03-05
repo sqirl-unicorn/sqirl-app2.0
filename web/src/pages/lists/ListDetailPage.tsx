@@ -16,6 +16,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useListsStore } from '../../store/listsStore';
+import * as wsClient from '../../lib/wsClient';
 import type { ListItem, ShoppingList } from '@sqirl/shared';
 
 interface ItemFormState {
@@ -42,7 +43,6 @@ export default function ListDetailPage() {
   const [movingItemId, setMovingItemId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchItems = useCallback(async () => {
     if (!listId) return;
@@ -62,8 +62,7 @@ export default function ListDetailPage() {
     setLoading(true);
     void fetchItems().finally(() => setLoading(false));
 
-    pollingRef.current = setInterval(() => void fetchItems(), 30_000);
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+    return wsClient.on('lists:changed', () => void fetchItems());;
   }, [listId, lists, fetchItems]);
 
   const unpurchased = items.filter((i) => !i.isPurchased && !i.isDeleted);

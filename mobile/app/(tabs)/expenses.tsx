@@ -7,7 +7,8 @@
  * Pending sync: ⚠ badge on un-synced rows
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import * as wsClient from '../../src/lib/wsClient';
 import {
   View, Text, ScrollView, TouchableOpacity, FlatList, StyleSheet,
   Pressable, Modal, TextInput, Alert, ActivityIndicator, Switch,
@@ -19,6 +20,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useHouseholdStore } from '../../src/store/householdStore';
 import { useExpensesStore } from '../../src/store/expensesStore';
 import type { Expense, ExpenseCategory, ExpenseScope } from '@sqirl/shared';
+import { colors, typography, spacing, borderRadius, shadows } from '../../constants/designTokens';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -160,7 +162,7 @@ function ExpenseFormModal({
               <Text style={categoryId ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
                 {selectedCat ? selectedCat.name : 'Select category…'}
               </Text>
-              <Ionicons name="chevron-down" size={16} color="#9ca3af" />
+              <Ionicons name="chevron-down" size={16} color={colors.text.subtle} />
             </TouchableOpacity>
             <Text style={styles.label}>Business</Text>
             <TextInput style={styles.input} value={business} onChangeText={setBusiness} placeholder="e.g. Woolworths" />
@@ -180,7 +182,7 @@ function ExpenseFormModal({
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
-                {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                {saving ? <ActivityIndicator size="small" color={colors.text.inverse} /> : <Text style={styles.saveBtnText}>Save</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -202,7 +204,7 @@ function ExpenseFormModal({
                     onPress={() => { setCategoryId(item.id); setShowCatPicker(false); }}
                   >
                     <Text style={styles.catPickerName}>{item.name}</Text>
-                    {item.id === categoryId && <Ionicons name="checkmark" size={16} color="#60a5fa" />}
+                    {item.id === categoryId && <Ionicons name="checkmark" size={16} color={colors.primary[400]} />}
                   </TouchableOpacity>
                 )}
               />
@@ -275,7 +277,7 @@ function MoveModal({
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>Move to {targetScope}</Text>
-          {loading ? <ActivityIndicator size="small" color="#60a5fa" style={{ marginVertical: 16 }} /> : (
+          {loading ? <ActivityIndicator size="small" color={colors.primary[400]} style={{ marginVertical: 16 }} /> : (
             <ScrollView>
               {expenses.map((exp) => (
                 <View key={exp.id} style={{ borderWidth: 1, borderColor: '#f3f4f6', borderRadius: 8, padding: 12, marginBottom: 8 }}>
@@ -294,7 +296,7 @@ function MoveModal({
                             onPress={() => setOverrides({ ...overrides, [exp.id]: c.id })}
                           >
                             <Text style={styles.catPickerName}>{c.name}</Text>
-                            {overrides[exp.id] === c.id && <Ionicons name="checkmark" size={16} color="#60a5fa" />}
+                            {overrides[exp.id] === c.id && <Ionicons name="checkmark" size={16} color={colors.primary[400]} />}
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
@@ -309,7 +311,7 @@ function MoveModal({
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.saveBtn} onPress={handleMove} disabled={saving || loading}>
-              {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Move</Text>}
+              {saving ? <ActivityIndicator size="small" color={colors.text.inverse} /> : <Text style={styles.saveBtnText}>Move</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -356,7 +358,7 @@ function DateView({
               onPress={() => setCollapsed((s) => { const n = new Set(s); isOpen ? n.add(date) : n.delete(date); return n; })}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name={isOpen ? 'chevron-down' : 'chevron-forward'} size={14} color="#9ca3af" />
+                <Ionicons name={isOpen ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.text.subtle} />
                 <Text style={{ fontSize: 13, fontWeight: '500', color: '#374151' }}>{label}</Text>
                 <Text style={{ fontSize: 11, color: '#d1d5db' }}>({dayExps.length})</Text>
               </View>
@@ -429,7 +431,7 @@ function CatNode({
         onPress={() => setOpen((o) => !o)}
       >
         <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={13} color="#d1d5db" />
-        <Ionicons name={iconName as never} size={15} color="#60a5fa" style={{ marginHorizontal: 4 }} />
+        <Ionicons name={iconName as never} size={15} color={colors.primary[400]} style={{ marginHorizontal: 4 }} />
         <Text style={styles.catRowName} numberOfLines={1}>{node.name}</Text>
         {budget > 0 && (
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
@@ -553,11 +555,9 @@ export default function ExpensesScreen() {
     }
   }, [scope, month, setPersonalCategories, setHouseholdCategories, setPersonalBudgets, setHouseholdBudgets, setPersonalExpenses, setHouseholdExpenses]);
 
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     void loadAll();
-    pollingRef.current = setInterval(() => { void loadAll(); }, 30_000);
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+    return wsClient.on('expenses:changed', () => void loadAll());
   }, [loadAll]);
 
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
@@ -605,10 +605,10 @@ export default function ExpensesScreen() {
         <Text style={styles.headerTitle}>Expenses</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity onPress={() => router.push('/expenses/categories')}>
-            <Ionicons name="list" size={22} color="#60a5fa" />
+            <Ionicons name="list" size={22} color={colors.primary[400]} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/expenses/budget')}>
-            <Ionicons name="wallet-outline" size={22} color="#60a5fa" />
+            <Ionicons name="wallet-outline" size={22} color={colors.primary[400]} />
           </TouchableOpacity>
         </View>
       </View>
@@ -707,7 +707,7 @@ export default function ExpensesScreen() {
 
       {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => setShowAdd(true)}>
-        <Ionicons name="add" size={28} color="#fff" />
+        <Ionicons name="add" size={28} color={colors.text.inverse} />
       </TouchableOpacity>
 
       {/* Modals */}
@@ -748,44 +748,44 @@ export default function ExpensesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: '#f9fafb' },
-  header:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, backgroundColor: '#fff' },
-  headerTitle:     { fontSize: 24, fontWeight: '700', color: '#1f2937' },
-  tabBar:          { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  tab:             { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginRight: 8 },
-  tabActive:       { backgroundColor: '#eff6ff' },
-  tabText:         { fontSize: 14, color: '#9ca3af', fontWeight: '500' },
-  tabTextActive:   { color: '#60a5fa' },
-  monthNav:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, backgroundColor: '#fff' },
-  monthBtn:        { paddingHorizontal: 16, paddingVertical: 4 },
-  monthBtnText:    { fontSize: 20, color: '#9ca3af' },
-  monthLabel:      { fontSize: 13, fontWeight: '600', color: '#374151', width: 160, textAlign: 'center' },
-  summary:         { margin: 16, padding: 14, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#f3f4f6' },
-  toolbar:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
-  toggleGroup:     { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 8, padding: 2 },
-  toggleBtn:       { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 },
-  toggleBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } },
-  toggleBtnText:   { fontSize: 12, color: '#9ca3af', fontWeight: '500' },
-  toggleBtnTextActive: { color: '#374151' },
-  moveBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#e0e7ff', borderRadius: 8, backgroundColor: '#eef2ff' },
-  fab:             { position: 'absolute', bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#60a5fa', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
-  catRow:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingRight: 14, backgroundColor: '#fff' },
-  catRowName:      { fontSize: 14, fontWeight: '500', color: '#374151', flex: 1 },
-  expRow:          { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingRight: 14, backgroundColor: '#fafafa', borderTopWidth: 1, borderTopColor: '#f9fafb', gap: 8 },
+  container:            { flex: 1, backgroundColor: colors.background.canvas },
+  header:               { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.base, paddingTop: 56, paddingBottom: spacing.md, backgroundColor: colors.background.surface },
+  headerTitle:          { fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: colors.text.default },
+  tabBar:               { flexDirection: 'row', paddingHorizontal: spacing.base, paddingVertical: spacing.xs, backgroundColor: colors.background.surface, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  tab:                  { paddingHorizontal: spacing.base, paddingVertical: spacing.sm, borderRadius: borderRadius.pill, marginRight: spacing.xs },
+  tabActive:            { backgroundColor: colors.primary[50] },
+  tabText:              { fontSize: typography.fontSize.md, color: colors.text.subtle, fontWeight: typography.fontWeight.medium },
+  tabTextActive:        { color: colors.primary[400] },
+  monthNav:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, backgroundColor: colors.background.surface },
+  monthBtn:             { paddingHorizontal: spacing.base, paddingVertical: spacing.xs },
+  monthBtnText:         { fontSize: typography.fontSize.lg, color: colors.text.subtle },
+  monthLabel:           { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.neutral[700], width: 160, textAlign: 'center' },
+  summary:              { margin: spacing.base, padding: spacing.md, backgroundColor: colors.background.surface, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border.subtle },
+  toolbar:              { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.base, paddingBottom: spacing.md, gap: spacing.xs },
+  toggleGroup:          { flexDirection: 'row', backgroundColor: colors.neutral[100], borderRadius: borderRadius.md, padding: 2 },
+  toggleBtn:            { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: borderRadius.sm },
+  toggleBtnActive:      { backgroundColor: colors.background.surface, ...shadows.sm },
+  toggleBtnText:        { fontSize: typography.fontSize['2xs'], color: colors.text.subtle, fontWeight: typography.fontWeight.medium },
+  toggleBtnTextActive:  { color: colors.neutral[700] },
+  moveBtn:              { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: '#e0e7ff', borderRadius: borderRadius.md, backgroundColor: '#eef2ff' },
+  fab:                  { position: 'absolute', bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary[400], alignItems: 'center', justifyContent: 'center', ...shadows.md },
+  catRow:               { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingRight: spacing.md, backgroundColor: colors.background.surface },
+  catRowName:           { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: colors.neutral[700], flex: 1 },
+  expRow:               { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.xs, paddingRight: spacing.md, backgroundColor: colors.background.surfaceSubtle, borderTopWidth: 1, borderTopColor: colors.background.canvas, gap: spacing.xs },
   // Modal styles
-  overlay:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet:           { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85%' },
-  sheetTitle:      { fontSize: 17, fontWeight: '700', color: '#1f2937', marginBottom: 16 },
-  label:           { fontSize: 12, color: '#6b7280', marginBottom: 4, marginTop: 10 },
-  input:           { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#1f2937' },
-  pickerBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
-  pickerBtnText:   { fontSize: 14, color: '#1f2937' },
-  pickerBtnPlaceholder: { fontSize: 14, color: '#9ca3af' },
-  catPickerRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
-  catPickerName:   { fontSize: 14, color: '#374151', flex: 1 },
-  modalActions:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
-  cancelBtn:       { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb' },
-  cancelBtnText:   { fontSize: 14, color: '#6b7280' },
-  saveBtn:         { paddingHorizontal: 24, paddingVertical: 8, borderRadius: 10, backgroundColor: '#60a5fa' },
-  saveBtnText:     { fontSize: 14, color: '#fff', fontWeight: '600' },
+  overlay:              { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheet:                { backgroundColor: colors.background.surface, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, padding: spacing.lg, maxHeight: '85%' as any },
+  sheetTitle:           { fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.bold, color: colors.text.default, marginBottom: spacing.base },
+  label:                { fontSize: typography.fontSize['2xs'], color: colors.text.muted, marginBottom: spacing.xs, marginTop: spacing.md },
+  input:                { borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, fontSize: typography.fontSize.md, color: colors.text.default },
+  pickerBtn:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  pickerBtnText:        { fontSize: typography.fontSize.md, color: colors.text.default },
+  pickerBtnPlaceholder: { fontSize: typography.fontSize.md, color: colors.text.subtle },
+  catPickerRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, paddingHorizontal: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.background.canvas },
+  catPickerName:        { fontSize: typography.fontSize.md, color: colors.neutral[700], flex: 1 },
+  modalActions:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.base },
+  cancelBtn:            { paddingHorizontal: spacing.base, paddingVertical: spacing.xs, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.border.soft },
+  cancelBtnText:        { fontSize: typography.fontSize.md, color: colors.text.muted },
+  saveBtn:              { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, borderRadius: borderRadius.md, backgroundColor: colors.primary[400] },
+  saveBtnText:          { fontSize: typography.fontSize.md, color: colors.text.inverse, fontWeight: typography.fontWeight.semibold },
 });

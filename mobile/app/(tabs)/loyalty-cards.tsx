@@ -15,6 +15,7 @@ import {
   Modal, ScrollView, Image, Alert, Dimensions, Platform, ActivityIndicator,
 } from 'react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as wsClient from '../../src/lib/wsClient';
 import { Svg, Rect, G } from 'react-native-svg';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../../src/lib/api';
@@ -22,6 +23,7 @@ import { LOYALTY_BRANDS, getBrandById, getBrandsForCountry } from '@sqirl/shared
 import type { LoyaltyCard, BarcodeFormat, LoyaltyBrand } from '@sqirl/shared';
 import { useAuthStore } from '../../src/store/authStore';
 import { encodeCode128, generateQrMatrix } from '../../src/lib/barcodeRenderer';
+import { colors, typography, spacing, borderRadius, shadows } from '../../constants/designTokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -199,7 +201,7 @@ function CardFormModal({ userCountry, initial, onSave, onClose }: {
 
           <Text style={[s.label, { marginTop: 12 }]}>Card Number</Text>
           <View style={s.cardNumRow}>
-            <TextInput style={[s.input, { flex: 1 }]} value={cardNumber} onChangeText={setCardNumber} placeholder="Enter or scan card number" autoCorrect={false} autoCapitalize="none" />
+            <TextInput style={[s.input, { flex: 1 }]} value={cardNumber} onChangeText={setCardNumber} placeholder="Enter or scan card number" keyboardType="number-pad" autoCorrect={false} autoCapitalize="none" />
             <TouchableOpacity style={s.scanBtn} onPress={() => setShowScan(true)}>
               <Text style={s.scanBtnText}>📷</Text>
             </TouchableOpacity>
@@ -306,7 +308,6 @@ export default function LoyaltyCardsScreen() {
   const [showAdd, setShowAdd]       = useState(false);
   const [editing, setEditing]       = useState<LoyaltyCard | null>(null);
   const [fullscreen, setFullscreen] = useState<LoyaltyCard | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchCards = useCallback(async () => {
     try {
@@ -319,8 +320,7 @@ export default function LoyaltyCardsScreen() {
 
   useEffect(() => {
     void fetchCards();
-    pollingRef.current = setInterval(() => { void fetchCards(); }, 30_000);
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+    return wsClient.on('loyaltyCards:changed', () => void fetchCards());
   }, [fetchCards]);
 
   const handleAdd = async (d: { brandId: string; cardNumber: string; barcodeFormat: BarcodeFormat; notes: string }) => {
@@ -383,66 +383,66 @@ export default function LoyaltyCardsScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  container:              { flex: 1, backgroundColor: '#f9fafb' },
-  header:                 { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  headerSearch:           { flex: 1, backgroundColor: '#f3f4f6', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#111827' },
-  addBtn:                 { backgroundColor: '#60a5fa', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  addBtnText:             { color: '#fff', fontWeight: '600', fontSize: 14 },
-  cardRow:                { backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
-  cardHeader:             { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  cardLogo:               { width: 32, height: 32, borderRadius: 8 },
+  container:              { flex: 1, backgroundColor: colors.background.canvas },
+  header:                 { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.base, paddingVertical: spacing.md, backgroundColor: colors.background.surface, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  headerSearch:           { flex: 1, backgroundColor: colors.neutral[100], borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, fontSize: typography.fontSize.md, color: colors.text.default },
+  addBtn:                 { backgroundColor: colors.primary[400], borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  addBtnText:             { color: colors.text.inverse, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.md },
+  cardRow:                { backgroundColor: colors.background.surface, borderRadius: borderRadius.xl, padding: spacing.base, ...shadows.sm },
+  cardHeader:             { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
+  cardLogo:               { width: 32, height: 32, borderRadius: borderRadius.md },
   cardHeaderText:         { flex: 1 },
-  cardBrandName:          { fontWeight: '600', fontSize: 14, color: '#111827' },
-  cardNotes:              { fontSize: 12, color: '#9ca3af', marginTop: 1 },
-  actionIcon:             { fontSize: 16, marginLeft: 4 },
-  barcodeWrap:            { alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, paddingVertical: 8 },
-  cardNumber:             { textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace', fontSize: 13, color: '#6b7280', marginTop: 6, letterSpacing: 1 },
-  barcodeFallback:        { backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
-  barcodeFallbackText:    { fontSize: 11, color: '#9ca3af', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
-  brandPicker:            { marginBottom: 4 },
-  searchInput:            { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, marginBottom: 6, backgroundColor: '#fff' },
-  brandList:              { maxHeight: 200, borderWidth: 1, borderColor: '#f3f4f6', borderRadius: 10 },
-  brandRow:               { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
-  brandRowSelected:       { backgroundColor: '#eff6ff' },
-  brandLogo:              { width: 24, height: 24, borderRadius: 4 },
-  brandName:              { fontSize: 14, color: '#374151', flex: 1 },
-  emptyText:              { textAlign: 'center', color: '#9ca3af', fontSize: 13, padding: 16 },
-  formModal:              { flex: 1, backgroundColor: '#f9fafb' },
-  formHeader:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  formTitle:              { fontWeight: '700', fontSize: 17, color: '#111827' },
-  formCloseBtn:           { fontSize: 18, color: '#6b7280', padding: 4 },
-  formBody:               { padding: 16 },
-  label:                  { fontSize: 12, fontWeight: '600', color: '#6b7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  input:                  { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, backgroundColor: '#fff' },
-  cardNumRow:             { flexDirection: 'row', gap: 8 },
-  scanBtn:                { backgroundColor: '#f3f4f6', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'center' },
-  scanBtnText:            { fontSize: 18 },
-  formatScroll:           { marginBottom: 4 },
-  formatChip:             { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, marginBottom: 4 },
-  formatChipSelected:     { borderColor: '#60a5fa', backgroundColor: '#eff6ff' },
-  formatChipText:         { fontSize: 12, color: '#6b7280' },
-  formatChipTextSelected: { color: '#2563eb', fontWeight: '600' },
-  errText:                { color: '#ef4444', fontSize: 13, marginTop: 8 },
-  saveBtn:                { backgroundColor: '#60a5fa', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
-  saveBtnText:            { color: '#fff', fontWeight: '700', fontSize: 15 },
+  cardBrandName:          { fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.md, color: colors.text.default },
+  cardNotes:              { fontSize: typography.fontSize['2xs'], color: colors.text.subtle, marginTop: 1 },
+  actionIcon:             { fontSize: typography.fontSize.base, marginLeft: spacing.xs },
+  barcodeWrap:            { alignItems: 'center', backgroundColor: colors.background.surface, borderRadius: borderRadius.md, paddingVertical: spacing.xs },
+  cardNumber:             { textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace', fontSize: typography.fontSize.sm, color: colors.text.muted, marginTop: spacing.xs, letterSpacing: 1 },
+  barcodeFallback:        { backgroundColor: colors.neutral[100], alignItems: 'center', justifyContent: 'center', borderRadius: borderRadius.sm },
+  barcodeFallbackText:    { fontSize: typography.fontSize.xs, color: colors.text.subtle, fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
+  brandPicker:            { marginBottom: spacing.xs },
+  searchInput:            { borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, fontSize: typography.fontSize.md, marginBottom: spacing.sm, backgroundColor: colors.background.surface },
+  brandList:              { maxHeight: 200, borderWidth: 1, borderColor: colors.border.subtle, borderRadius: borderRadius.md },
+  brandRow:               { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.background.canvas },
+  brandRowSelected:       { backgroundColor: colors.primary[50] },
+  brandLogo:              { width: 24, height: 24, borderRadius: borderRadius.xs },
+  brandName:              { fontSize: typography.fontSize.md, color: colors.neutral[700], flex: 1 },
+  emptyText:              { textAlign: 'center', color: colors.text.subtle, fontSize: typography.fontSize.sm, padding: spacing.base },
+  formModal:              { flex: 1, backgroundColor: colors.background.canvas },
+  formHeader:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.base, backgroundColor: colors.background.surface, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  formTitle:              { fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.base, color: colors.text.default },
+  formCloseBtn:           { fontSize: typography.fontSize.base, color: colors.text.muted, padding: spacing.xs },
+  formBody:               { padding: spacing.base },
+  label:                  { fontSize: typography.fontSize['2xs'], fontWeight: typography.fontWeight.semibold, color: colors.text.muted, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
+  input:                  { borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: typography.fontSize.md, backgroundColor: colors.background.surface },
+  cardNumRow:             { flexDirection: 'row', gap: spacing.xs },
+  scanBtn:                { backgroundColor: colors.neutral[100], borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, justifyContent: 'center' },
+  scanBtnText:            { fontSize: typography.fontSize.base },
+  formatScroll:           { marginBottom: spacing.xs },
+  formatChip:             { borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginRight: spacing.sm, marginBottom: spacing.xs },
+  formatChipSelected:     { borderColor: colors.primary[400], backgroundColor: colors.primary[50] },
+  formatChipText:         { fontSize: typography.fontSize['2xs'], color: colors.text.muted },
+  formatChipTextSelected: { color: colors.primary[600], fontWeight: typography.fontWeight.semibold },
+  errText:                { color: colors.error.default, fontSize: typography.fontSize.sm, marginTop: spacing.xs },
+  saveBtn:                { backgroundColor: colors.primary[400], borderRadius: borderRadius.lg, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.lg },
+  saveBtnText:            { color: colors.text.inverse, fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.md + 1 },
   scanContainer:          { flex: 1, backgroundColor: '#000' },
-  scanPermText:           { color: '#fff', textAlign: 'center', marginTop: 200, fontSize: 16 },
+  scanPermText:           { color: colors.text.inverse, textAlign: 'center', marginTop: 200, fontSize: typography.fontSize.base },
   scanOverlay:            { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
-  scanFrame:              { width: 260, height: 160, borderWidth: 2, borderColor: '#60a5fa', borderRadius: 12 },
-  scanHint:               { color: '#fff', marginTop: 16, fontSize: 14, textAlign: 'center' },
-  scanClose:              { marginTop: 40, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12 },
-  scanCloseText:          { color: '#fff', fontWeight: '600', fontSize: 15 },
-  fullscreen:             { flex: 1, backgroundColor: '#fff' },
-  fullscreenTop:          { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  fullscreenClose:        { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 16, right: 16 },
-  fullscreenCloseText:    { fontSize: 22, color: '#9ca3af' },
-  fullscreenLogo:         { width: 72, height: 72, borderRadius: 16, marginBottom: 12 },
-  fullscreenBrand:        { fontWeight: '700', fontSize: 22, color: '#111827', textAlign: 'center' },
-  fullscreenNotes:        { fontSize: 14, color: '#9ca3af', marginTop: 4, textAlign: 'center' },
-  fullscreenBottom:       { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
-  fullscreenCardNum:      { fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace', fontSize: 16, color: '#374151', letterSpacing: 2, marginTop: 8 },
-  emptyState:             { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyIcon:              { fontSize: 48, marginBottom: 12 },
-  emptyMsg:               { fontSize: 14, color: '#9ca3af', textAlign: 'center' },
-  errorText:              { color: '#ef4444', textAlign: 'center', fontSize: 14, marginTop: 40, paddingHorizontal: 24 },
+  scanFrame:              { width: 260, height: 160, borderWidth: 2, borderColor: colors.primary[400], borderRadius: borderRadius.lg },
+  scanHint:               { color: colors.text.inverse, marginTop: spacing.base, fontSize: typography.fontSize.md, textAlign: 'center' },
+  scanClose:              { marginTop: spacing.xl, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: borderRadius.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  scanCloseText:          { color: colors.text.inverse, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.md + 1 },
+  fullscreen:             { flex: 1, backgroundColor: colors.background.surface },
+  fullscreenTop:          { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  fullscreenClose:        { position: 'absolute', top: Platform.OS === 'ios' ? 52 : spacing.base, right: spacing.base },
+  fullscreenCloseText:    { fontSize: 22, color: colors.text.subtle },
+  fullscreenLogo:         { width: 72, height: 72, borderRadius: borderRadius.xl, marginBottom: spacing.md },
+  fullscreenBrand:        { fontWeight: typography.fontWeight.bold, fontSize: 22, color: colors.text.default, textAlign: 'center' },
+  fullscreenNotes:        { fontSize: typography.fontSize.md, color: colors.text.subtle, marginTop: spacing.xs, textAlign: 'center' },
+  fullscreenBottom:       { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: spacing.md },
+  fullscreenCardNum:      { fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace', fontSize: typography.fontSize.base, color: colors.neutral[700], letterSpacing: 2, marginTop: spacing.xs },
+  emptyState:             { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  emptyIcon:              { fontSize: 48, marginBottom: spacing.md },
+  emptyMsg:               { fontSize: typography.fontSize.md, color: colors.text.subtle, textAlign: 'center' },
+  errorText:              { color: colors.error.default, textAlign: 'center', fontSize: typography.fontSize.md, marginTop: spacing.xl, paddingHorizontal: spacing.lg },
 });

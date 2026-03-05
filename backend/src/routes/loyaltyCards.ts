@@ -28,6 +28,17 @@ import {
   type BarcodeFormat,
   type LoyaltyCardRow,
 } from '../services/loyaltyCardService';
+import { pool } from '../db';
+import { broadcast } from '../ws/wsServer';
+
+/** Fetch the user's current household ID for broadcast targeting. Fire-and-forget safe. */
+async function getUserHhId(userId: string): Promise<string | null> {
+  const r = await pool.query<{ household_id: string }>(
+    `SELECT household_id FROM household_members WHERE user_id = $1 LIMIT 1`,
+    [userId]
+  );
+  return r.rows[0]?.household_id ?? null;
+}
 
 const router = Router();
 
@@ -94,6 +105,7 @@ router.post('/', authenticate, async (req: Request, res: Response): Promise<void
       isTest
     );
     res.status(201).json({ card: toApi(card) });
+    broadcast('loyaltyCards:changed', req.user!.userId, card.household_id ?? undefined);
   } catch (err) {
     console.error('[SQIRL-LOYAL-SERVER-001]', err);
     res.status(500).json({ error: 'Unexpected server error', errorCode: 'SQIRL-LOYAL-SERVER-001' });
@@ -125,6 +137,7 @@ router.put('/:cardId', authenticate, async (req: Request, res: Response): Promis
 
     const card = await updateCard(cardId, req.user!.userId, fields);
     res.json({ card: toApi(card) });
+    broadcast('loyaltyCards:changed', req.user!.userId, card.household_id ?? undefined);
   } catch (err) {
     const e = err as Error & { errorCode?: string };
     if (e.errorCode === 'SQIRL-LOYAL-ACCESS-001') {
@@ -141,8 +154,10 @@ router.put('/:cardId', authenticate, async (req: Request, res: Response): Promis
 router.delete('/:cardId', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { cardId } = req.params;
-    await deleteCard(cardId, req.user!.userId);
+    const userId = req.user!.userId;
+    await deleteCard(cardId, userId);
     res.json({ success: true });
+    void getUserHhId(userId).then((hhId) => broadcast('loyaltyCards:changed', userId, hhId ?? undefined));
   } catch (err) {
     const e = err as Error & { errorCode?: string };
     if (e.errorCode === 'SQIRL-LOYAL-ACCESS-001') {

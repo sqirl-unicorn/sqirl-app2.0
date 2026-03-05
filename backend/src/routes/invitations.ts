@@ -21,6 +21,7 @@ import {
 } from '../services/householdService';
 import { createNotification, notifyMany } from '../services/notificationService';
 import { findUserById } from '../services/authService';
+import { broadcast } from '../ws/wsServer';
 
 const router = Router();
 router.use(authenticate);
@@ -82,6 +83,7 @@ router.post('/:token/accept', async (req: Request, res: Response): Promise<void>
     );
 
     res.json({ household, created });
+    broadcast('household:changed', req.user!.userId, household.id);
   } catch (err) {
     const e = err as { errorCode?: string; message?: string };
     if (e.errorCode) {

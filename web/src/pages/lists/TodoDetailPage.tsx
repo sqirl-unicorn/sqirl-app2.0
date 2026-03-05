@@ -14,10 +14,11 @@
  * Polls every 30 s for real-time household updates.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useListsStore } from '../../store/listsStore';
+import * as wsClient from '../../lib/wsClient';
 import type { ShoppingList, TodoTask, TodoSubtask } from '@sqirl/shared';
 
 export default function TodoDetailPage() {
@@ -42,8 +43,6 @@ export default function TodoDetailPage() {
   const [editSubTitle, setEditSubTitle] = useState('');
   const [editSubDue, setEditSubDue] = useState('');
   const [manualProgressId, setManualProgressId] = useState<string | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const fetchTasks = useCallback(async () => {
     if (!listId) return;
     try {
@@ -59,8 +58,7 @@ export default function TodoDetailPage() {
     setList(lists.find((l) => l.id === listId) ?? null);
     setLoading(true);
     void fetchTasks().finally(() => setLoading(false));
-    pollingRef.current = setInterval(() => void fetchTasks(), 30_000);
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+    return wsClient.on('lists:changed', () => void fetchTasks());
   }, [listId, lists, fetchTasks]);
 
   function toggleExpand(taskId: string) {

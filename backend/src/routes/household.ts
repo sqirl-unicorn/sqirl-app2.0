@@ -51,6 +51,7 @@ import {
   createNotification,
   notifyMany,
 } from '../services/notificationService';
+import { broadcast } from '../ws/wsServer';
 
 const router = Router();
 router.use(authenticate);
@@ -154,6 +155,7 @@ router.put('/', async (req: Request, res: Response): Promise<void> => {
     );
 
     res.json({ household: renamed });
+    broadcast('household:changed', req.user!.userId, ctx.householdId);
   } catch (err) {
     serviceErrorResponse(err, res);
   }
@@ -347,6 +349,7 @@ router.post('/members/:userId/promote', async (req: Request, res: Response): Pro
     );
 
     res.json({ success: true });
+    broadcast('household:changed', req.user!.userId, ctx.householdId);
   } catch (err) {
     serviceErrorResponse(err, res);
   }
@@ -374,6 +377,7 @@ router.post('/members/:userId/demote', async (req: Request, res: Response): Prom
     );
 
     res.json({ success: true });
+    broadcast('household:changed', req.user!.userId, ctx.householdId);
   } catch (err) {
     serviceErrorResponse(err, res);
   }
@@ -429,6 +433,7 @@ router.delete('/members/:userId', async (req: Request, res: Response): Promise<v
     }
 
     res.json({ autoDeleted });
+    broadcast('household:changed', req.user!.userId, ctx.householdId);
   } catch (err) {
     serviceErrorResponse(err, res);
   }
@@ -472,6 +477,7 @@ router.post('/exit', async (req: Request, res: Response): Promise<void> => {
     }
 
     res.json({ autoDeleted, householdId });
+    broadcast('household:changed', req.user!.userId, householdId);
   } catch (err) {
     serviceErrorResponse(err, res);
   }

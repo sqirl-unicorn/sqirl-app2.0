@@ -13,7 +13,7 @@
  * Pending-sync indicator: ⟳ badge on rows in pendingSyncIds set.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Home, GraduationCap, Car, UtensilsCrossed, HeartPulse, Tv, Shirt,
   ChevronDown, ChevronRight, Plus, RefreshCw, Calendar, LayoutList, Filter,
@@ -24,6 +24,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useHouseholdStore } from '../../store/householdStore';
 import { useExpensesStore } from '../../store/expensesStore';
 import type { Expense, ExpenseCategory, ExpenseScope } from '@sqirl/shared';
+import * as wsClient from '../../lib/wsClient';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 
@@ -747,11 +748,9 @@ export default function ExpensesPage() {
     }
   }, [scope, month, setPersonalCategories, setHouseholdCategories, setPersonalBudgets, setHouseholdBudgets, setPersonalExpenses, setHouseholdExpenses]);
 
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     void loadAll();
-    pollingRef.current = setInterval(() => { void loadAll(); }, 30_000);
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+    return wsClient.on('expenses:changed', () => void loadAll());
   }, [loadAll]);
 
   // Summary stats

@@ -18,9 +18,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../../src/lib/api';
+import * as wsClient from '../../src/lib/wsClient';
 import { GIFT_BRANDS, getGiftBrandsForCountry, getGiftBrandById } from '@sqirl/shared';
 import type { GiftCard, GiftBrand, BarcodeFormat, CreateGiftCardPayload } from '@sqirl/shared';
 import { useAuthStore } from '../../src/store/authStore';
+import { colors, typography, spacing, borderRadius, shadows } from '../../constants/designTokens';
 
 const BARCODE_FORMATS: BarcodeFormat[] = [
   'CODE128','EAN13','EAN8','QR','CODABAR',
@@ -224,8 +226,7 @@ export default function GiftCardsScreen() {
 
   useEffect(() => {
     void loadCards();
-    const id = setInterval(() => { void loadCards(); }, 30_000);
-    return () => clearInterval(id);
+    return wsClient.on('giftCards:changed', () => void loadCards());
   }, [loadCards]);
 
   const active   = cards.filter((c) => !c.isDeleted && !c.isArchived);
@@ -248,7 +249,7 @@ export default function GiftCardsScreen() {
       </View>
 
       {loading
-        ? <ActivityIndicator style={{ flex: 1 }} color="#60a5fa" />
+        ? <ActivityIndicator style={{ flex: 1 }} color={colors.primary[400]} />
         : visible.length === 0
           ? (
             <View style={s.empty}>
@@ -282,59 +283,59 @@ export default function GiftCardsScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  screen:         { flex: 1, backgroundColor: '#f9fafb' },
-  tabs:           { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  tabBtn:         { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f3f4f6' },
-  tabBtnActive:   { backgroundColor: '#60a5fa' },
-  tabTxt:         { fontSize: 13, fontWeight: '500', color: '#6b7280' },
-  tabTxtActive:   { color: '#fff' },
-  addBtn2:        { marginLeft: 'auto', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#60a5fa' },
-  addBtn2Txt:     { fontSize: 13, fontWeight: '600', color: '#fff' },
-  tile:           { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  tileLogo:       { width: 48, height: 48, borderRadius: 12, backgroundColor: '#f9fafb', marginRight: 12 },
-  tileInfo:       { flex: 1 },
-  tileBrand:      { fontSize: 15, fontWeight: '600', color: '#1f2937' },
-  tileNum:        { fontSize: 12, color: '#6b7280', fontFamily: 'monospace', marginTop: 2 },
-  tileExpiry:     { fontSize: 11, color: '#9ca3af', marginTop: 2 },
-  tileRight:      { alignItems: 'flex-end' },
-  tileAmt:        { fontSize: 18, fontWeight: '700', color: '#1f2937' },
-  archTag:        { fontSize: 10, color: '#9ca3af', backgroundColor: '#f3f4f6', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
-  empty:          { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyIcon:      { fontSize: 48 },
-  emptyText:      { fontSize: 14, color: '#9ca3af' },
+  screen:          { flex: 1, backgroundColor: colors.background.canvas },
+  tabs:            { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.base, paddingVertical: spacing.md, gap: spacing.xs, backgroundColor: colors.background.surface, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  tabBtn:          { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.pill, backgroundColor: colors.neutral[100] },
+  tabBtnActive:    { backgroundColor: colors.primary[400] },
+  tabTxt:          { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.text.muted },
+  tabTxtActive:    { color: colors.text.inverse },
+  addBtn2:         { marginLeft: 'auto', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.pill, backgroundColor: colors.primary[400] },
+  addBtn2Txt:      { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.text.inverse },
+  tile:            { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.surface, borderRadius: borderRadius.xl, padding: spacing.md, ...shadows.sm },
+  tileLogo:        { width: 48, height: 48, borderRadius: borderRadius.lg, backgroundColor: colors.background.canvas, marginRight: spacing.md },
+  tileInfo:        { flex: 1 },
+  tileBrand:       { fontSize: typography.fontSize.md + 1, fontWeight: typography.fontWeight.semibold, color: colors.text.default },
+  tileNum:         { fontSize: typography.fontSize['2xs'], color: colors.text.muted, fontFamily: 'monospace', marginTop: 2 },
+  tileExpiry:      { fontSize: typography.fontSize.xs, color: colors.text.subtle, marginTop: 2 },
+  tileRight:       { alignItems: 'flex-end' },
+  tileAmt:         { fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.text.default },
+  archTag:         { fontSize: typography.fontSize.xs, color: colors.text.subtle, backgroundColor: colors.neutral[100], borderRadius: borderRadius.md, paddingHorizontal: spacing.sm, paddingVertical: 2, marginTop: 2 },
+  empty:           { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  emptyIcon:       { fontSize: 48 },
+  emptyText:       { fontSize: typography.fontSize.md, color: colors.text.subtle },
   // Modal
-  modalContainer: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  modalTitle:     { fontSize: 20, fontWeight: '700', color: '#1f2937', marginBottom: 16 },
-  label:          { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 4 },
-  input:          { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 10, fontSize: 14, marginBottom: 14, color: '#1f2937' },
-  row:            { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  scanBtn:        { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 10, alignItems: 'center', justifyContent: 'center' },
-  fmtChip:        { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f3f4f6', marginRight: 8 },
-  fmtChipSel:     { backgroundColor: '#60a5fa' },
-  fmtChipText:    { fontSize: 12, color: '#6b7280' },
-  fmtChipTextSel: { color: '#fff', fontWeight: '600' },
-  modalBtns:      { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 40 },
-  cancelBtn:      { flex: 1, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#d1d5db', alignItems: 'center' },
-  cancelTxt:      { fontSize: 14, fontWeight: '500', color: '#374151' },
-  addBtn:         { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#60a5fa', alignItems: 'center' },
-  addTxt:         { fontSize: 14, fontWeight: '600', color: '#fff' },
-  brandPicker:    { flex: 1 },
-  searchInput:    { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 10, fontSize: 14, marginBottom: 10 },
-  brandList:      { maxHeight: 380 },
-  brandRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 4, gap: 12, borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
-  brandRowSel:    { backgroundColor: '#eff6ff' },
-  brandLogo:      { width: 28, height: 28, borderRadius: 6 },
-  brandName:      { fontSize: 14, color: '#1f2937' },
-  brandHeader:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginBottom: 16, gap: 10 },
-  brandHeaderLogo:{ width: 36, height: 36, borderRadius: 8 },
-  brandHeaderName:{ flex: 1, fontSize: 16, fontWeight: '600', color: '#1f2937' },
-  changeBrand:    { fontSize: 13, color: '#60a5fa', textDecorationLine: 'underline' },
+  modalContainer:  { flex: 1, padding: spacing.lg, backgroundColor: colors.background.surface },
+  modalTitle:      { fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.text.default, marginBottom: spacing.base },
+  label:           { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.neutral[700], marginBottom: spacing.xs },
+  input:           { borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.md, padding: spacing.md, fontSize: typography.fontSize.md, marginBottom: spacing.md, color: colors.text.default },
+  row:             { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md },
+  scanBtn:         { borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center' },
+  fmtChip:         { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.pill, backgroundColor: colors.neutral[100], marginRight: spacing.xs },
+  fmtChipSel:      { backgroundColor: colors.primary[400] },
+  fmtChipText:     { fontSize: typography.fontSize['2xs'], color: colors.text.muted },
+  fmtChipTextSel:  { color: colors.text.inverse, fontWeight: typography.fontWeight.semibold },
+  modalBtns:       { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs, marginBottom: 40 },
+  cancelBtn:       { flex: 1, padding: spacing.md, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border.strong, alignItems: 'center' },
+  cancelTxt:       { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: colors.neutral[700] },
+  addBtn:          { flex: 1, padding: spacing.md, borderRadius: borderRadius.lg, backgroundColor: colors.primary[400], alignItems: 'center' },
+  addTxt:          { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.text.inverse },
+  brandPicker:     { flex: 1 },
+  searchInput:     { borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.md, padding: spacing.md, fontSize: typography.fontSize.md, marginBottom: spacing.md },
+  brandList:       { maxHeight: 380 },
+  brandRow:        { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.xs, gap: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.background.canvas },
+  brandRowSel:     { backgroundColor: colors.primary[50] },
+  brandLogo:       { width: 28, height: 28, borderRadius: borderRadius.sm },
+  brandName:       { fontSize: typography.fontSize.md, color: colors.text.default },
+  brandHeader:     { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.canvas, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.base, gap: spacing.md },
+  brandHeaderLogo: { width: 36, height: 36, borderRadius: borderRadius.md },
+  brandHeaderName: { flex: 1, fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.text.default },
+  changeBrand:     { fontSize: typography.fontSize.sm, color: colors.primary[400], textDecorationLine: 'underline' },
   // Scan
-  scanContainer:  { flex: 1, backgroundColor: '#000' },
-  scanPerm:       { color: '#fff', textAlign: 'center', marginTop: 100 },
-  scanOverlay:    { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  scanFrame:      { width: 260, height: 160, borderWidth: 2, borderColor: '#60a5fa', borderRadius: 12 },
-  scanHint:       { color: '#fff', marginTop: 16, fontSize: 13 },
-  scanCloseBtn:   { marginTop: 32, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20 },
-  scanCloseTxt:   { color: '#fff', fontSize: 14, fontWeight: '600' },
+  scanContainer:   { flex: 1, backgroundColor: '#000' },
+  scanPerm:        { color: colors.text.inverse, textAlign: 'center', marginTop: 100 },
+  scanOverlay:     { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  scanFrame:       { width: 260, height: 160, borderWidth: 2, borderColor: colors.primary[400], borderRadius: borderRadius.lg },
+  scanHint:        { color: colors.text.inverse, marginTop: spacing.base, fontSize: typography.fontSize.sm },
+  scanCloseBtn:    { marginTop: spacing.xl, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: borderRadius.pill },
+  scanCloseTxt:    { color: colors.text.inverse, fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold },
 });

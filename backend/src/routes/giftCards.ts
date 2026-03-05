@@ -42,6 +42,17 @@ import {
   type GiftCardRow,
   type GiftCardTransactionRow,
 } from '../services/giftCardService';
+import { pool } from '../db';
+import { broadcast } from '../ws/wsServer';
+
+/** Fetch the user's current household ID for broadcast targeting. Fire-and-forget safe. */
+async function getUserHhId(userId: string): Promise<string | null> {
+  const r = await pool.query<{ household_id: string }>(
+    `SELECT household_id FROM household_members WHERE user_id = $1 LIMIT 1`,
+    [userId]
+  );
+  return r.rows[0]?.household_id ?? null;
+}
 
 const router = Router();
 
@@ -147,6 +158,7 @@ router.post('/', authenticate, async (req: Request, res: Response): Promise<void
       isTest
     );
     res.status(201).json({ card: cardToApi(card) });
+    broadcast('giftCards:changed', req.user!.userId, card.household_id ?? undefined);
   } catch (err) {
     console.error('[SQIRL-GIFT-SERVER-001]', err);
     res.status(500).json({ error: 'Unexpected server error', errorCode: 'SQIRL-GIFT-SERVER-001' });
@@ -182,6 +194,7 @@ router.put('/:cardId', authenticate, async (req: Request, res: Response): Promis
 
     const card = await updateGiftCard(cardId, req.user!.userId, fields);
     res.json({ card: cardToApi(card) });
+    broadcast('giftCards:changed', req.user!.userId, card.household_id ?? undefined);
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-GIFT-ACCESS-001') {
@@ -213,6 +226,7 @@ router.put('/:cardId/balance', authenticate, async (req: Request, res: Response)
       typeof note === 'string' ? note : undefined
     );
     res.json({ card: cardToApi(card), transaction: txnToApi(transaction) });
+    broadcast('giftCards:changed', req.user!.userId, card.household_id ?? undefined);
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-GIFT-ACCESS-001') {
@@ -260,6 +274,7 @@ router.post('/:cardId/transactions', authenticate, async (req: Request, res: Res
       isTest
     );
     res.status(201).json({ card: cardToApi(card), transaction: txnToApi(transaction), expenseId });
+    broadcast('giftCards:changed', req.user!.userId, card.household_id ?? undefined);
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-GIFT-ACCESS-001') {
@@ -296,6 +311,7 @@ router.put('/:cardId/archive', authenticate, async (req: Request, res: Response)
     const { cardId } = req.params;
     const card = await archiveGiftCard(cardId, req.user!.userId);
     res.json({ card: cardToApi(card) });
+    broadcast('giftCards:changed', req.user!.userId, card.household_id ?? undefined);
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-GIFT-ACCESS-001') {
@@ -312,8 +328,10 @@ router.put('/:cardId/archive', authenticate, async (req: Request, res: Response)
 router.delete('/:cardId', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {
     const { cardId } = req.params;
-    await deleteGiftCard(cardId, req.user!.userId);
+    const userId = req.user!.userId;
+    await deleteGiftCard(cardId, userId);
     res.json({ success: true });
+    void getUserHhId(userId).then((hhId) => broadcast('giftCards:changed', userId, hhId ?? undefined));
   } catch (err) {
     const e = err as ServiceError;
     if (e.errorCode === 'SQIRL-GIFT-ACCESS-001') {

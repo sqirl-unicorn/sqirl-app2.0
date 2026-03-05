@@ -27,6 +27,20 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import * as listService from '../services/listService';
+import { pool } from '../db';
+import { broadcast } from '../ws/wsServer';
+
+/**
+ * Fetch the user's current household ID for broadcast targeting.
+ * Returns null if user has no household. Fire-and-forget safe.
+ */
+async function getUserHhId(userId: string): Promise<string | null> {
+  const r = await pool.query<{ household_id: string }>(
+    `SELECT household_id FROM household_members WHERE user_id = $1 LIMIT 1`,
+    [userId]
+  );
+  return r.rows[0]?.household_id ?? null;
+}
 
 const router = Router();
 
@@ -99,6 +113,7 @@ router.post('/', async (req: Request, res: Response) => {
       isTest
     );
     res.status(201).json({ list });
+    broadcast('lists:changed', req.user!.userId, list.householdId ?? undefined);
   } catch (err) {
     handleError(res, err);
   }
@@ -113,6 +128,7 @@ router.put('/:listId', async (req: Request, res: Response) => {
     const { name } = req.body as { name?: string };
     const list = await listService.renameList(req.params.listId, req.user!.userId, name ?? '');
     res.json({ list });
+    broadcast('lists:changed', req.user!.userId, list.householdId ?? undefined);
   } catch (err) {
     handleError(res, err);
   }
@@ -123,8 +139,10 @@ router.put('/:listId', async (req: Request, res: Response) => {
  */
 router.delete('/:listId', async (req: Request, res: Response) => {
   try {
-    await listService.deleteList(req.params.listId, req.user!.userId);
+    const userId = req.user!.userId;
+    await listService.deleteList(req.params.listId, userId);
     res.json({ success: true });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -143,8 +161,10 @@ router.put('/items/:itemId/move', async (req: Request, res: Response) => {
       res.status(400).json({ error: 'targetListId is required', errorCode: 'SQIRL-LIST-MOVE-001' });
       return;
     }
-    const item = await listService.moveItem(req.params.itemId, targetListId, req.user!.userId);
+    const userId = req.user!.userId;
+    const item = await listService.moveItem(req.params.itemId, targetListId, userId);
     res.json({ item });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -177,9 +197,10 @@ router.post('/:listId/items', async (req: Request, res: Response) => {
       quantity?: number;
       clientId?: string;
     };
+    const userId = req.user!.userId;
     const item = await listService.addItem(
       req.params.listId,
-      req.user!.userId,
+      userId,
       description ?? '',
       packSize ?? null,
       unit ?? null,
@@ -188,6 +209,7 @@ router.post('/:listId/items', async (req: Request, res: Response) => {
       false
     );
     res.status(201).json({ item });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -215,8 +237,10 @@ router.put('/:listId/items/:itemId', async (req: Request, res: Response) => {
     if (isPurchased !== undefined) fields.isPurchased = isPurchased;
     if (position !== undefined) fields.position = position;
 
-    const item = await listService.updateItem(req.params.listId, req.params.itemId, req.user!.userId, fields);
+    const userId = req.user!.userId;
+    const item = await listService.updateItem(req.params.listId, req.params.itemId, userId, fields);
     res.json({ item });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -227,8 +251,10 @@ router.put('/:listId/items/:itemId', async (req: Request, res: Response) => {
  */
 router.delete('/:listId/items/:itemId', async (req: Request, res: Response) => {
   try {
-    await listService.deleteItem(req.params.listId, req.params.itemId, req.user!.userId);
+    const userId = req.user!.userId;
+    await listService.deleteItem(req.params.listId, req.params.itemId, userId);
     res.json({ success: true });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -259,15 +285,17 @@ router.post('/:listId/tasks', async (req: Request, res: Response) => {
       dueDate?: string;
       clientId?: string;
     };
+    const userId = req.user!.userId;
     const task = await listService.addTask(
       req.params.listId,
-      req.user!.userId,
+      userId,
       title ?? '',
       dueDate ?? null,
       clientId ?? null,
       false
     );
     res.status(201).json({ task });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -295,8 +323,10 @@ router.put('/:listId/tasks/:taskId', async (req: Request, res: Response) => {
     if (useManualProgress !== undefined) fields.useManualProgress = useManualProgress;
     if (position !== undefined) fields.position = position;
 
-    const task = await listService.updateTask(req.params.listId, req.params.taskId, req.user!.userId, fields);
+    const userId = req.user!.userId;
+    const task = await listService.updateTask(req.params.listId, req.params.taskId, userId, fields);
     res.json({ task });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -307,8 +337,10 @@ router.put('/:listId/tasks/:taskId', async (req: Request, res: Response) => {
  */
 router.delete('/:listId/tasks/:taskId', async (req: Request, res: Response) => {
   try {
-    await listService.deleteTask(req.params.listId, req.params.taskId, req.user!.userId);
+    const userId = req.user!.userId;
+    await listService.deleteTask(req.params.listId, req.params.taskId, userId);
     res.json({ success: true });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -327,16 +359,18 @@ router.post('/:listId/tasks/:taskId/subtasks', async (req: Request, res: Respons
       dueDate?: string;
       clientId?: string;
     };
+    const userId = req.user!.userId;
     const subtask = await listService.addSubtask(
       req.params.listId,
       req.params.taskId,
-      req.user!.userId,
+      userId,
       title ?? '',
       dueDate ?? null,
       clientId ?? null,
       false
     );
     res.status(201).json({ subtask });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -360,14 +394,16 @@ router.put('/:listId/tasks/:taskId/subtasks/:subtaskId', async (req: Request, re
     if (isCompleted !== undefined) fields.isCompleted = isCompleted;
     if (position !== undefined) fields.position = position;
 
+    const userId = req.user!.userId;
     const subtask = await listService.updateSubtask(
       req.params.listId,
       req.params.taskId,
       req.params.subtaskId,
-      req.user!.userId,
+      userId,
       fields
     );
     res.json({ subtask });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }
@@ -378,13 +414,15 @@ router.put('/:listId/tasks/:taskId/subtasks/:subtaskId', async (req: Request, re
  */
 router.delete('/:listId/tasks/:taskId/subtasks/:subtaskId', async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.userId;
     await listService.deleteSubtask(
       req.params.listId,
       req.params.taskId,
       req.params.subtaskId,
-      req.user!.userId
+      userId
     );
     res.json({ success: true });
+    void getUserHhId(userId).then((hhId) => broadcast('lists:changed', userId, hhId ?? undefined));
   } catch (err) {
     handleError(res, err);
   }

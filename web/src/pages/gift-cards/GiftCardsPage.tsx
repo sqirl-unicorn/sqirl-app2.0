@@ -12,13 +12,14 @@
  * Real-time: polls every 30 s for household updates.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { GIFT_BRANDS, getGiftBrandsForCountry, getGiftBrandById } from '@sqirl/shared';
 import type { GiftCard, GiftBrand, BarcodeFormat, CreateGiftCardPayload } from '@sqirl/shared';
 import { useAuthStore } from '../../store/authStore';
 import { useGiftCardsStore } from '../../store/giftCardsStore';
+import * as wsClient from '../../lib/wsClient';
 
 // ── Brand Picker ──────────────────────────────────────────────────────────────
 
@@ -352,8 +353,7 @@ export default function GiftCardsPage() {
 
   useEffect(() => {
     void loadCards();
-    const id = setInterval(() => { void loadCards(); }, 30_000);
-    return () => clearInterval(id);
+    return wsClient.on('giftCards:changed', () => void loadCards());
   }, [loadCards]);
 
   const active   = cards.filter((c) => !c.isDeleted && !c.isArchived);

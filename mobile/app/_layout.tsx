@@ -6,13 +6,20 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
+import * as wsClient from '../src/lib/wsClient';
 
 export default function RootLayout() {
-  const { loadStoredAuth } = useAuthStore();
+  const { loadStoredAuth, accessToken } = useAuthStore();
 
   useEffect(() => {
     void loadStoredAuth();
   }, [loadStoredAuth]);
+
+  // Connect WS on login, disconnect on logout
+  useEffect(() => {
+    if (accessToken) wsClient.connect(accessToken);
+    else wsClient.disconnect();
+  }, [accessToken]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

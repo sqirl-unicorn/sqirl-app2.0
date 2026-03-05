@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type NotificationResponse } from '../lib/api';
 import { useHouseholdStore } from '../store/householdStore';
+import * as wsClient from '../lib/wsClient';
 
 export function NotificationsBell() {
   const { unreadCount, setUnreadCount, setNotifications, notifications } = useHouseholdStore();
@@ -15,9 +16,12 @@ export function NotificationsBell() {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load unread count on mount
+  // Load unread count on mount + re-fetch on WS notification event
   useEffect(() => {
     void api.getUnreadCount().then(({ unreadCount: n }) => setUnreadCount(n)).catch(() => {});
+    return wsClient.on('notifications:changed', () => {
+      void api.getUnreadCount().then(({ unreadCount: n }) => setUnreadCount(n)).catch(() => {});
+    });
   }, [setUnreadCount]);
 
   // Close on outside click

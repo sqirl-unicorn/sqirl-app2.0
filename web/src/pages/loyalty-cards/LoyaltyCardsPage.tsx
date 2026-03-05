@@ -16,13 +16,14 @@
  * Offline: renders from in-memory store; add/edit/delete queued when offline.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import JsBarcode from 'jsbarcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { api } from '../../lib/api';
 import { LOYALTY_BRANDS, getBrandById, getBrandsForCountry } from '@sqirl/shared';
 import type { LoyaltyCard, BarcodeFormat, LoyaltyBrand } from '@sqirl/shared';
 import { useAuthStore } from '../../store/authStore';
+import * as wsClient from '../../lib/wsClient';
 
 // ── Barcode renderer ──────────────────────────────────────────────────────────
 
@@ -405,8 +406,6 @@ export default function LoyaltyCardsPage() {
   const [showModal, setShowModal]   = useState(false);
   const [editing, setEditing]       = useState<LoyaltyCard | null>(null);
   const [search, setSearch]         = useState('');
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const fetchCards = useCallback(async () => {
     try {
       const { cards: c } = await api.getLoyaltyCards();
@@ -421,8 +420,7 @@ export default function LoyaltyCardsPage() {
 
   useEffect(() => {
     void fetchCards();
-    pollingRef.current = setInterval(() => { void fetchCards(); }, 30_000);
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
+    return wsClient.on('loyaltyCards:changed', () => void fetchCards());
   }, [fetchCards]);
 
   const handleAdd = async (data: {

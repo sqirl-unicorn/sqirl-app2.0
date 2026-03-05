@@ -8,8 +8,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import http from 'http';
 import app from './app';
 import { pool } from './db';
+import { init as initWs } from './ws/wsServer';
 
 const PORT = Number(process.env.PORT ?? 3000);
 
@@ -23,7 +25,11 @@ async function start(): Promise<void> {
     process.exit(1);
   }
 
-  app.listen(PORT, () => {
+  // Wrap Express in a plain http.Server so the WS server can share the same port
+  const server = http.createServer(app);
+  initWs(server);
+
+  server.listen(PORT, () => {
     console.log(`Sqirl API v2 listening on port ${PORT}`);
   });
 }

@@ -5,11 +5,13 @@
  * Lists pages are now fully implemented; household pages retain their implementation.
  */
 
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { Layout } from './components/Layout';
 import { useAuthStore } from './store/authStore';
+import * as wsClient from './lib/wsClient';
 import HouseholdPage from './pages/household/HouseholdPage';
 import InvitePage from './pages/household/InvitePage';
 import InvitationsPage from './pages/household/InvitationsPage';
@@ -52,9 +54,28 @@ function ListRouter() {
   return <ListDetailPage />;
 }
 
+/**
+ * Inner component that manages the WebSocket lifecycle.
+ * Must live inside BrowserRouter so hooks are valid.
+ */
+function WsManager() {
+  const tokens = useAuthStore((s) => s.tokens);
+
+  useEffect(() => {
+    if (tokens?.accessToken) {
+      wsClient.connect(tokens.accessToken);
+    } else {
+      wsClient.disconnect();
+    }
+  }, [tokens?.accessToken]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <WsManager />
       <Routes>
         {/* Public */}
         <Route path="/login" element={<Login />} />

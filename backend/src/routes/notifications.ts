@@ -18,6 +18,7 @@ import {
   markRead,
   markAllRead,
 } from '../services/notificationService';
+import { broadcastToUser } from '../ws/wsServer';
 
 const router = Router();
 router.use(authenticate);
@@ -51,8 +52,10 @@ router.get('/unread-count', async (req: Request, res: Response): Promise<void> =
 
 router.put('/read-all', async (req: Request, res: Response): Promise<void> => {
   try {
-    await markAllRead(req.user!.userId);
+    const userId = req.user!.userId;
+    await markAllRead(userId);
     res.json({ success: true });
+    broadcastToUser('notifications:changed', userId);
   } catch (err) {
     console.error('SQIRL-NOTIFY-001: markAllRead error', err);
     res.status(500).json({ error: 'Unexpected server error', errorCode: 'SQIRL-NOTIFY-001' });
@@ -63,8 +66,10 @@ router.put('/read-all', async (req: Request, res: Response): Promise<void> => {
 
 router.put('/:id/read', async (req: Request, res: Response): Promise<void> => {
   try {
-    await markRead(req.params.id, req.user!.userId);
+    const userId = req.user!.userId;
+    await markRead(req.params.id, userId);
     res.json({ success: true });
+    broadcastToUser('notifications:changed', userId);
   } catch (err) {
     console.error('SQIRL-NOTIFY-001: markRead error', err);
     res.status(500).json({ error: 'Unexpected server error', errorCode: 'SQIRL-NOTIFY-001' });
