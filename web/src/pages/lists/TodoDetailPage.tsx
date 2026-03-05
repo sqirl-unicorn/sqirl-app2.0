@@ -19,6 +19,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useListsStore } from '../../store/listsStore';
 import * as wsClient from '../../lib/wsClient';
+import { analytics } from '../../lib/analyticsService';
 import type { ShoppingList, TodoTask, TodoSubtask } from '@sqirl/shared';
 
 export default function TodoDetailPage() {
@@ -74,6 +75,7 @@ export default function TodoDetailPage() {
     try {
       setActionLoading('add-task');
       const { task } = await api.addTask(listId, { title: newTaskTitle.trim(), dueDate: newTaskDue || undefined });
+      analytics.track('list.task_added', { hasDueDate: !!newTaskDue });
       setTasks([...tasks, task]);
       setNewTaskTitle('');
       setNewTaskDue('');
@@ -90,6 +92,7 @@ export default function TodoDetailPage() {
     try {
       setActionLoading(task.id);
       const { task: updated } = await api.updateTask(listId, task.id, { isCompleted: !task.isCompleted });
+      if (!task.isCompleted) analytics.track('list.task_completed', {});
       setTasks(tasks.map((t) => (t.id === updated.id ? updated : t)));
     } catch {
       setError('Failed to update task');

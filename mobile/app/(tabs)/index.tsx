@@ -15,6 +15,8 @@ import {
 import { useRouter } from 'expo-router';
 import { api, type ShoppingList, type ListType } from '../../src/lib/api';
 import { useListsStore } from '../../src/store/listsStore';
+import { colors, typography, spacing, borderRadius } from '../../constants/designTokens';
+import { analytics } from '../../src/lib/analyticsService';
 
 const SECTIONS: { key: ListType; label: string; icon: string }[] = [
   { key: 'general', label: 'General', icon: '📋' },
@@ -55,6 +57,7 @@ export default function ListsScreen() {
     try {
       setActionLoading('create');
       const { list } = await api.createList({ name: newName.trim(), listType });
+      analytics.track('list.created', { listType });
       setLists([list, ...lists]);
       setNewName('');
       setAddingType(null);
@@ -74,6 +77,8 @@ export default function ListsScreen() {
           try {
             setActionLoading(listId);
             await api.deleteList(listId);
+            const deletedList = lists.find((l) => l.id === listId);
+            if (deletedList) analytics.track('list.deleted', { listType: deletedList.listType });
             setLists(lists.filter((l) => l.id !== listId));
           } catch {
             Alert.alert('Error', 'Failed to delete list');
@@ -128,7 +133,7 @@ export default function ListsScreen() {
         {SECTIONS.find((s) => s.key === list.listType)?.icon ?? '📋'}
       </Text>
       <Text style={styles.listName} numberOfLines={1}>{list.name}</Text>
-      {actionLoading === list.id && <ActivityIndicator size="small" color="#60a5fa" />}
+      {actionLoading === list.id && <ActivityIndicator size="small" color={colors.primary[400]} />}
       <Text style={styles.listChevron}>›</Text>
     </TouchableOpacity>
   );
@@ -136,7 +141,7 @@ export default function ListsScreen() {
   if (loading && lists.length === 0) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#60a5fa" />
+        <ActivityIndicator size="large" color={colors.primary[400]} />
       </View>
     );
   }
@@ -199,32 +204,32 @@ export default function ListsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  content: { padding: 16, paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText: { color: '#ef4444', fontSize: 13, marginBottom: 12 },
-  section: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  sectionIcon: { fontSize: 18, marginRight: 6 },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: '#374151', flex: 1 },
-  addBtn: { fontSize: 24, color: '#60a5fa', lineHeight: 28, paddingHorizontal: 4 },
-  addForm: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  container:      { flex: 1, backgroundColor: colors.background.canvas },
+  content:        { padding: spacing.base, paddingBottom: 40 },
+  center:         { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorText:      { color: colors.error.default, fontSize: typography.fontSize.sm, marginBottom: spacing.md },
+  section:        { marginBottom: spacing.lg },
+  sectionHeader:  { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  sectionIcon:    { fontSize: typography.fontSize.base, marginRight: spacing.sm },
+  sectionTitle:   { fontSize: typography.fontSize.md + 1, fontWeight: typography.fontWeight.semibold, color: colors.neutral[700], flex: 1 },
+  addBtn:         { fontSize: 24, color: colors.primary[400], lineHeight: 28, paddingHorizontal: spacing.xs },
+  addForm:        { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
   addInput: {
-    flex: 1, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, backgroundColor: '#fff',
+    flex: 1, borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, fontSize: typography.fontSize.md, backgroundColor: colors.background.surface,
   },
-  addConfirm: { backgroundColor: '#60a5fa', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  addConfirmText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  disabled: { opacity: 0.5 },
-  addCancel: { padding: 8 },
-  addCancelText: { color: '#9ca3af', fontSize: 14 },
-  emptyText: { color: '#9ca3af', fontSize: 13, paddingVertical: 8, paddingHorizontal: 4 },
+  addConfirm:     { backgroundColor: colors.primary[400], borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  addConfirmText: { color: colors.text.inverse, fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold },
+  disabled:       { opacity: 0.5 },
+  addCancel:      { padding: spacing.xs },
+  addCancelText:  { color: colors.text.subtle, fontSize: typography.fontSize.md },
+  emptyText:      { color: colors.text.subtle, fontSize: typography.fontSize.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.xs },
   listCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#fff', borderRadius: 12, padding: 14,
-    marginBottom: 6, borderWidth: 1, borderColor: '#f3f4f6',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.background.surface, borderRadius: borderRadius.lg, padding: spacing.md,
+    marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border.subtle,
   },
-  listIcon: { fontSize: 20 },
-  listName: { flex: 1, fontSize: 14, fontWeight: '500', color: '#1f2937' },
-  listChevron: { fontSize: 20, color: '#d1d5db' },
+  listIcon:     { fontSize: typography.fontSize.lg },
+  listName:     { flex: 1, fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: colors.text.default },
+  listChevron:  { fontSize: typography.fontSize.lg, color: colors.border.strong },
 });

@@ -12,9 +12,9 @@ mobile/
       _layout.tsx         — Bottom tab bar: Lists, Household (with unread badge), Expenses, Loyalty, Gift Cards
       index.tsx           — Lists tab: 3 sections (General/Grocery/To Do), inline add, long-press rename/delete
       household.tsx       — Household screen
-      expenses.tsx        — Expenses: scope tabs, month nav, summary bar, Date/Category view toggle, FAB add, long-press multi-select+move, ExpenseFormModal, MoveModal, ⚠ pending sync badge, 30 s poll
-      loyalty-cards.tsx   — Loyalty Cards: inline barcode/QR list; tap→fullscreen (barcode in bottom half); brand picker; expo-camera scan; edit/delete; polls 30 s
-      gift-cards.tsx      — Gift Cards: Active/Archived tabs; card tiles (logo+balance); add modal (brand picker, card number+expo-camera scan, balance, conditional PIN+expiry per brand rules); polls 30 s
+      expenses.tsx        — Expenses: scope tabs, month nav, summary bar, Date/Category view toggle, FAB add, long-press multi-select+move, ExpenseFormModal, MoveModal, ⚠ pending sync badge, WS real-time sync
+      loyalty-cards.tsx   — Loyalty Cards: inline barcode/QR list; tap→fullscreen (barcode in bottom half); brand picker; expo-camera scan; edit/delete; WS real-time sync
+      gift-cards.tsx      — Gift Cards: Active/Archived tabs; card tiles (logo+balance); add modal (brand picker, card number+expo-camera scan, balance, conditional PIN+expiry per brand rules); WS real-time sync
     gift-card/
       [cardId].tsx        — Gift Card Detail: top half (logo,balance,expiry,masked PIN); barcode/QR SVG centred in second half; Update Balance modal; Add Transaction modal (amount,date,location,desc,addAsExpense Switch); transaction history; Archive + Delete actions
     household/
@@ -47,6 +47,8 @@ mobile/
 - `app/household/invitations.tsx` — FlatList, accept/decline, household warning banner, pull-to-refresh
 - `app/household/exit.tsx` — Step flow: choose→scope→pending; `ScopeToggle` sub-component per copy category
 - `src/lib/api.ts` — thin wrapper: calls `createApiClient` from `@sqirl/shared` with AsyncStorage token getter + `EXPO_PUBLIC_API_URL` base. Re-exports all types from `@sqirl/shared`.
+- `src/lib/analyticsService.ts` — `analytics` singleton; `init()` (loads queue+opt-out from AsyncStorage), `track(eventType, props)`, `flush()`, `setOptOut(bool)`, `destroy()`; AppState 'background' triggers flush; 30 s auto-flush; in-memory queue + AsyncStorage persistence; no PII in props
+- `src/lib/wsClient.ts` — singleton WS client; `connect(token)`, `disconnect()`, `on(type, cb)→unsub`; exponential backoff (1s→30s); EXPO_PUBLIC_API_URL
 - `src/store/authStore.ts` — `setAuth(user,tokens,epk,salt)`, `setMasterKey(key)`, `clearAuth()`, `loadStoredAuth()`
 - `src/store/householdStore.ts` — mirrors web householdStore
 

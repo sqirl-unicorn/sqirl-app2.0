@@ -22,6 +22,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { api, type ListItem, type ShoppingList } from '../../../src/lib/api';
 import { useListsStore } from '../../../src/store/listsStore';
+import { colors, typography, spacing, borderRadius } from '../../../constants/designTokens';
+import { analytics } from '../../../src/lib/analyticsService';
 
 interface ItemForm {
   description: string;
@@ -82,6 +84,7 @@ export default function ListItemsScreen() {
         unit: form.unit || undefined,
         quantity: form.quantity ? Number(form.quantity) : undefined,
       });
+      analytics.track('list.item_added', { listType: list?.listType, hasQuantity: !!form.quantity, hasUnit: !!form.unit });
       setItems([...items, item]);
       setForm(EMPTY_FORM);
       setAddingItem(false);
@@ -97,6 +100,7 @@ export default function ListItemsScreen() {
     try {
       setActionLoading(item.id);
       const { item: updated } = await api.updateListItem(listId, item.id, { isPurchased: !item.isPurchased });
+      if (!item.isPurchased) analytics.track('list.item_purchased', { listType: list?.listType });
       setItems(items.map((i) => (i.id === updated.id ? updated : i)));
     } catch {
       Alert.alert('Error', 'Failed to update item');
@@ -208,6 +212,7 @@ export default function ListItemsScreen() {
             onChangeText={(v) => setEditForm({ ...editForm, description: v })}
             placeholder="Description *"
             style={styles.editInput}
+            autoCapitalize="sentences"
           />
           <View style={styles.editRow}>
             <TextInput value={editForm.packSize} onChangeText={(v) => setEditForm({ ...editForm, packSize: v })} placeholder="Pack size" style={[styles.editInput, styles.editSmall]} />
@@ -236,12 +241,12 @@ export default function ListItemsScreen() {
         </View>
       )}
 
-      {actionLoading === item.id && <ActivityIndicator size="small" color="#60a5fa" />}
+      {actionLoading === item.id && <ActivityIndicator size="small" color={colors.primary[400]} />}
     </TouchableOpacity>
   );
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#60a5fa" /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary[400]} /></View>;
   }
 
   return (
@@ -278,6 +283,7 @@ export default function ListItemsScreen() {
             placeholder="Item description *"
             style={styles.addInput}
             returnKeyType="done"
+            autoCapitalize="sentences"
           />
           <View style={styles.editRow}>
             <TextInput value={form.packSize} onChangeText={(v) => setForm({ ...form, packSize: v })} placeholder="Pack size" style={[styles.addInput, styles.editSmall]} />
@@ -326,40 +332,40 @@ export default function ListItemsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  content: { padding: 16, paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  toolbar: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  toolBtn: { flex: 1, backgroundColor: '#60a5fa', borderRadius: 10, padding: 12, alignItems: 'center' },
-  scanBtn: { backgroundColor: '#f3f4f6' },
-  toolBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  addForm: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#e5e7eb' },
-  addInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 10, fontSize: 14, marginBottom: 8, backgroundColor: '#f9fafb' },
-  editRow: { flexDirection: 'row', gap: 6 },
-  editSmall: { flex: 1 },
-  editActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  saveBtn: { backgroundColor: '#60a5fa', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
-  saveBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  cancelText: { color: '#9ca3af', fontSize: 13, paddingVertical: 8 },
-  disabled: { opacity: 0.5 },
-  section: { marginBottom: 20 },
-  sectionLabel: { fontSize: 12, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  container:       { flex: 1, backgroundColor: colors.background.canvas },
+  content:         { padding: spacing.base, paddingBottom: 40 },
+  center:          { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  toolbar:         { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.base },
+  toolBtn:         { flex: 1, backgroundColor: colors.primary[400], borderRadius: borderRadius.md, padding: spacing.md, alignItems: 'center' },
+  scanBtn:         { backgroundColor: colors.neutral[100] },
+  toolBtnText:     { color: colors.text.inverse, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.md },
+  addForm:         { backgroundColor: colors.background.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.base, borderWidth: 1, borderColor: colors.border.soft },
+  addInput:        { borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.md, padding: spacing.md, fontSize: typography.fontSize.md, marginBottom: spacing.xs, backgroundColor: colors.background.canvas },
+  editRow:         { flexDirection: 'row', gap: spacing.sm },
+  editSmall:       { flex: 1 },
+  editActions:     { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  saveBtn:         { backgroundColor: colors.primary[400], borderRadius: borderRadius.md, paddingHorizontal: spacing.base, paddingVertical: spacing.xs },
+  saveBtnText:     { color: colors.text.inverse, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.sm },
+  cancelText:      { color: colors.text.subtle, fontSize: typography.fontSize.sm, paddingVertical: spacing.xs },
+  disabled:        { opacity: 0.5 },
+  section:         { marginBottom: spacing.lg },
+  sectionLabel:    { fontSize: typography.fontSize['2xs'], fontWeight: typography.fontWeight.semibold, color: colors.text.subtle, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xs },
   itemRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: '#fff', borderRadius: 10, padding: 12,
-    marginBottom: 6, borderWidth: 1, borderColor: '#e5e7eb',
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+    backgroundColor: colors.background.surface, borderRadius: borderRadius.md, padding: spacing.md,
+    marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border.soft,
   },
-  purchasedRow: { backgroundColor: '#f9fafb', borderColor: '#f3f4f6' },
-  checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#d1d5db', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  checkboxChecked: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  itemContent: { flex: 1 },
-  itemDesc: { fontSize: 14, fontWeight: '500', color: '#1f2937' },
-  strikethrough: { textDecorationLine: 'line-through', color: '#9ca3af' },
-  itemMeta: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
-  editContainer: { flex: 1 },
-  editInput: { borderWidth: 1, borderColor: '#60a5fa', borderRadius: 6, padding: 8, fontSize: 13, marginBottom: 6 },
-  emptyContainer: { alignItems: 'center', paddingVertical: 48 },
-  emptyText: { fontSize: 16, color: '#9ca3af', fontWeight: '500' },
-  emptyHint: { fontSize: 13, color: '#d1d5db', marginTop: 6 },
+  purchasedRow:    { backgroundColor: colors.background.canvas, borderColor: colors.border.subtle },
+  checkbox:        { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border.strong, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkboxChecked: { backgroundColor: colors.success.default, borderColor: colors.success.default },
+  checkmark:       { color: colors.text.inverse, fontSize: typography.fontSize['2xs'], fontWeight: typography.fontWeight.bold },
+  itemContent:     { flex: 1 },
+  itemDesc:        { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: colors.text.default },
+  strikethrough:   { textDecorationLine: 'line-through', color: colors.text.subtle },
+  itemMeta:        { fontSize: typography.fontSize['2xs'], color: colors.text.subtle, marginTop: 2 },
+  editContainer:   { flex: 1 },
+  editInput:       { borderWidth: 1, borderColor: colors.primary[400], borderRadius: borderRadius.sm, padding: spacing.xs, fontSize: typography.fontSize.sm, marginBottom: spacing.sm },
+  emptyContainer:  { alignItems: 'center', paddingVertical: 48 },
+  emptyText:       { fontSize: typography.fontSize.base, color: colors.text.subtle, fontWeight: typography.fontWeight.medium },
+  emptyHint:       { fontSize: typography.fontSize.sm, color: colors.neutral[300], marginTop: spacing.sm },
 });

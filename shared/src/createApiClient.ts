@@ -57,6 +57,7 @@ import type {
   SetBudgetPayload,
   CreateExpenseCategoryPayload,
   UpdateExpenseCategoryPayload,
+  AnalyticsBatchPayload,
 } from './types';
 
 export function createApiClient(
@@ -413,6 +414,17 @@ export function createApiClient(
 
     moveExpense(id: string, payload: MoveExpensePayload): Promise<{ expense: Expense }> {
       return request(`/expenses/${id}/move`, { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    // ── Analytics ────────────────────────────────────────────────────────────
+
+    /**
+     * Batch-send queued analytics events to the server.
+     * Fire-and-forget safe — callers should not await or block on this.
+     * @param payload - Batch of non-PII behavioural events
+     */
+    sendAnalyticsEvents(payload: AnalyticsBatchPayload): Promise<{ count: number }> {
+      return request('/analytics/events', { method: 'POST', body: JSON.stringify(payload) });
     },
 
   };

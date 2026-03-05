@@ -15,6 +15,8 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { api, type TodoTask, type TodoSubtask, type ShoppingList } from '../../../src/lib/api';
 import { useListsStore } from '../../../src/store/listsStore';
+import { colors, typography, spacing, borderRadius } from '../../../constants/designTokens';
+import { analytics } from '../../../src/lib/analyticsService';
 
 export default function TodoListScreen() {
   const { listId } = useLocalSearchParams<{ listId: string }>();
@@ -67,6 +69,7 @@ export default function TodoListScreen() {
     try {
       setActionLoading('add-task');
       const { task } = await api.addTask(listId, { title: newTaskTitle.trim(), dueDate: newTaskDue || undefined });
+      analytics.track('list.task_added', { hasDueDate: !!newTaskDue });
       setTasks([...tasks, task]);
       setNewTaskTitle('');
       setNewTaskDue('');
@@ -83,6 +86,7 @@ export default function TodoListScreen() {
     try {
       setActionLoading(task.id);
       const { task: updated } = await api.updateTask(listId, task.id, { isCompleted: !task.isCompleted });
+      if (!task.isCompleted) analytics.track('list.task_completed', {});
       setTasks(tasks.map((t) => (t.id === updated.id ? updated : t)));
     } catch {
       Alert.alert('Error', 'Failed to update task');
@@ -174,7 +178,7 @@ export default function TodoListScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#60a5fa" /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary[400]} /></View>;
   }
 
   return (
@@ -197,6 +201,7 @@ export default function TodoListScreen() {
             placeholder="Task title *"
             style={styles.addInput}
             returnKeyType="done"
+            autoCapitalize="sentences"
             onSubmitEditing={() => void handleAddTask()}
           />
           <TextInput
@@ -204,6 +209,7 @@ export default function TodoListScreen() {
             onChangeText={setNewTaskDue}
             placeholder="Due date (YYYY-MM-DD)"
             style={styles.addInput}
+            keyboardType="numbers-and-punctuation"
           />
           <View style={styles.editActions}>
             <TouchableOpacity
@@ -279,7 +285,7 @@ export default function TodoListScreen() {
                 <Text style={styles.expandIcon}>
                   {isExpanded ? '▲' : `▼${subtasks.length > 0 ? ` ${subtasks.length}` : ''}`}
                 </Text>
-                {actionLoading === task.id && <ActivityIndicator size="small" color="#60a5fa" />}
+                {actionLoading === task.id && <ActivityIndicator size="small" color={colors.primary[400]} />}
               </TouchableOpacity>
 
               {/* Subtasks */}
@@ -307,7 +313,7 @@ export default function TodoListScreen() {
                         </Text>
                         {sub.dueDate && <Text style={styles.dueDateText}>Due {sub.dueDate}</Text>}
                       </View>
-                      {actionLoading === sub.id && <ActivityIndicator size="small" color="#60a5fa" />}
+                      {actionLoading === sub.id && <ActivityIndicator size="small" color={colors.primary[400]} />}
                     </TouchableOpacity>
                   ))}
 
@@ -321,6 +327,7 @@ export default function TodoListScreen() {
                         placeholder="Subtask title *"
                         style={styles.addSubInput}
                         returnKeyType="done"
+                        autoCapitalize="sentences"
                         onSubmitEditing={() => void handleAddSubtask(task.id, task.dueDate)}
                       />
                       {task.dueDate && (
@@ -329,6 +336,7 @@ export default function TodoListScreen() {
                           onChangeText={setNewSubDue}
                           placeholder={`Due date (max ${task.dueDate})`}
                           style={styles.addSubInput}
+                          keyboardType="numbers-and-punctuation"
                         />
                       )}
                       <View style={styles.editActions}>
@@ -363,43 +371,43 @@ export default function TodoListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  content: { padding: 16, paddingBottom: 40 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  addTaskBtn: { marginBottom: 16, flexDirection: 'row', alignItems: 'center' },
-  addTaskBtnText: { color: '#60a5fa', fontSize: 15, fontWeight: '600' },
-  addForm: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#e5e7eb' },
-  addInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 10, fontSize: 14, marginBottom: 8, backgroundColor: '#f9fafb' },
-  editActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  saveBtn: { backgroundColor: '#60a5fa', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
-  saveBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  cancelText: { color: '#9ca3af', fontSize: 13, paddingVertical: 8 },
-  disabled: { opacity: 0.5 },
-  emptyContainer: { alignItems: 'center', paddingVertical: 48 },
-  emptyText: { fontSize: 16, color: '#9ca3af' },
-  taskCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#e5e7eb', overflow: 'hidden' },
-  taskRow: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, gap: 10 },
-  checkbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#d1d5db', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  checkboxChecked: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  taskContent: { flex: 1 },
-  taskTitle: { fontSize: 15, fontWeight: '600', color: '#1f2937', marginBottom: 2 },
-  strikethrough: { textDecorationLine: 'line-through', color: '#9ca3af' },
-  dueDateText: { fontSize: 12, color: '#9ca3af', marginBottom: 6 },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  progressBarBg: { flex: 1, height: 6, backgroundColor: '#f3f4f6', borderRadius: 3, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#60a5fa', borderRadius: 3 },
-  progressLabel: { fontSize: 11, color: '#9ca3af', width: 60 },
-  expandIcon: { fontSize: 13, color: '#9ca3af', marginTop: 3 },
-  subtasksContainer: { borderTopWidth: 1, borderTopColor: '#f3f4f6', backgroundColor: '#f9fafb', padding: 12 },
-  subtaskRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  subCheckbox: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: '#d1d5db', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  subCheckboxChecked: { backgroundColor: '#4ade80', borderColor: '#4ade80' },
-  subCheckmark: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  subtaskContent: { flex: 1 },
-  subtaskTitle: { fontSize: 13, fontWeight: '500', color: '#374151' },
-  addSubBtn: { paddingVertical: 6 },
-  addSubBtnText: { color: '#60a5fa', fontSize: 13, fontWeight: '500' },
-  addSubForm: { backgroundColor: '#fff', borderRadius: 8, padding: 10, marginTop: 6, borderWidth: 1, borderColor: '#e5e7eb' },
-  addSubInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 6, padding: 8, fontSize: 13, marginBottom: 6 },
+  container:          { flex: 1, backgroundColor: colors.background.canvas },
+  content:            { padding: spacing.base, paddingBottom: 40 },
+  center:             { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  addTaskBtn:         { marginBottom: spacing.base, flexDirection: 'row', alignItems: 'center' },
+  addTaskBtnText:     { color: colors.primary[400], fontSize: typography.fontSize.md + 1, fontWeight: typography.fontWeight.semibold },
+  addForm:            { backgroundColor: colors.background.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.base, borderWidth: 1, borderColor: colors.border.soft },
+  addInput:           { borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.md, padding: spacing.md, fontSize: typography.fontSize.md, marginBottom: spacing.xs, backgroundColor: colors.background.canvas },
+  editActions:        { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  saveBtn:            { backgroundColor: colors.primary[400], borderRadius: borderRadius.md, paddingHorizontal: spacing.base, paddingVertical: spacing.xs },
+  saveBtnText:        { color: colors.text.inverse, fontWeight: typography.fontWeight.semibold, fontSize: typography.fontSize.sm },
+  cancelText:         { color: colors.text.subtle, fontSize: typography.fontSize.sm, paddingVertical: spacing.xs },
+  disabled:           { opacity: 0.5 },
+  emptyContainer:     { alignItems: 'center', paddingVertical: 48 },
+  emptyText:          { fontSize: typography.fontSize.base, color: colors.text.subtle },
+  taskCard:           { backgroundColor: colors.background.surface, borderRadius: borderRadius.lg, marginBottom: spacing.md, borderWidth: 1, borderColor: colors.border.soft, overflow: 'hidden' },
+  taskRow:            { flexDirection: 'row', alignItems: 'flex-start', padding: spacing.md, gap: spacing.md },
+  checkbox:           { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.border.strong, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  checkboxChecked:    { backgroundColor: colors.success.default, borderColor: colors.success.default },
+  checkmark:          { color: colors.text.inverse, fontSize: typography.fontSize['2xs'], fontWeight: typography.fontWeight.bold },
+  taskContent:        { flex: 1 },
+  taskTitle:          { fontSize: typography.fontSize.md + 1, fontWeight: typography.fontWeight.semibold, color: colors.text.default, marginBottom: 2 },
+  strikethrough:      { textDecorationLine: 'line-through', color: colors.text.subtle },
+  dueDateText:        { fontSize: typography.fontSize['2xs'], color: colors.text.subtle, marginBottom: spacing.sm },
+  progressRow:        { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
+  progressBarBg:      { flex: 1, height: 6, backgroundColor: colors.neutral[100], borderRadius: 3, overflow: 'hidden' },
+  progressBarFill:    { height: '100%', backgroundColor: colors.primary[400], borderRadius: 3 },
+  progressLabel:      { fontSize: typography.fontSize.xs, color: colors.text.subtle, width: 60 },
+  expandIcon:         { fontSize: typography.fontSize.sm, color: colors.text.subtle, marginTop: 3 },
+  subtasksContainer:  { borderTopWidth: 1, borderTopColor: colors.border.subtle, backgroundColor: colors.background.canvas, padding: spacing.md },
+  subtaskRow:         { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, marginBottom: spacing.xs },
+  subCheckbox:        { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: colors.border.strong, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  subCheckboxChecked: { backgroundColor: colors.success.default, borderColor: colors.success.default },
+  subCheckmark:       { color: colors.text.inverse, fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.bold },
+  subtaskContent:     { flex: 1 },
+  subtaskTitle:       { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.neutral[700] },
+  addSubBtn:          { paddingVertical: spacing.sm },
+  addSubBtnText:      { color: colors.primary[400], fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium },
+  addSubForm:         { backgroundColor: colors.background.surface, borderRadius: borderRadius.md, padding: spacing.md, marginTop: spacing.sm, borderWidth: 1, borderColor: colors.border.soft },
+  addSubInput:        { borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.sm, padding: spacing.xs, fontSize: typography.fontSize.sm, marginBottom: spacing.sm },
 });

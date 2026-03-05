@@ -7,12 +7,16 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import * as wsClient from '../src/lib/wsClient';
+import { analytics } from '../src/lib/analyticsService';
 
 export default function RootLayout() {
   const { loadStoredAuth, accessToken } = useAuthStore();
 
   useEffect(() => {
     void loadStoredAuth();
+    // Initialize analytics queue (loads persisted events from AsyncStorage)
+    void analytics.init();
+    return () => analytics.destroy();
   }, [loadStoredAuth]);
 
   // Connect WS on login, disconnect on logout

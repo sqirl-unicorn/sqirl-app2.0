@@ -70,6 +70,7 @@
  *   DELETE /api/v1/expenses/:id
  *   GET    /api/v1/expenses/:id/move-check
  *   POST   /api/v1/expenses/:id/move
+ *   POST   /api/v1/analytics/events
  */
 
 import express, { Request, Response } from 'express';
@@ -96,6 +97,7 @@ import listsRouter from './routes/lists';
 import loyaltyCardsRouter from './routes/loyaltyCards';
 import giftCardsRouter from './routes/giftCards';
 import expensesRouter from './routes/expenses';
+import analyticsRouter from './routes/analytics';
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
@@ -106,5 +108,6 @@ app.use('/api/v1/lists', listsRouter);
 app.use('/api/v1/loyalty-cards', loyaltyCardsRouter);
 app.use('/api/v1/gift-cards', giftCardsRouter);
 app.use('/api/v1/expenses', expensesRouter);
+app.use('/api/v1/analytics', analyticsRouter);
 
 export default app;

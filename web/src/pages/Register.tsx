@@ -13,6 +13,7 @@ import { api } from '../lib/api';
 import { cryptoService } from '../lib/cryptoService';
 import { useAuthStore } from '../store/authStore';
 import type { Country } from '../lib/api';
+import { analytics } from '../lib/analyticsService';
 
 type IdentifierMode = 'email' | 'phone';
 type Step = 'identity' | 'recovery';
@@ -140,6 +141,9 @@ export default function Register() {
       setAuth(res.user, res.tokens, keys.encryptedPrivateKey, keys.salt);
       setMasterKey(keys.masterKey);
 
+      analytics.track('auth.register', { identifierType: mode, country });
+      void analytics.flush();
+
       // Store formatted keys for step 2 display (in-memory, never persisted)
       setRecoveryKeys(recovery.keys.map((k) => cryptoService.formatRecoveryKey(k)));
 
@@ -147,9 +151,16 @@ export default function Register() {
       setStep('recovery');
     } catch (err) {
       const code = err instanceof Error ? err.message : '';
-      if (code === 'SQIRL-AUTH-REG-002') setError('That email is already registered');
-      else if (code === 'SQIRL-AUTH-REG-003') setError('That phone number is already registered');
-      else setError('Registration failed. Please try again.');
+      if (code === 'SQIRL-AUTH-REG-002') {
+        analytics.track('auth.register_failed', { reason: 'duplicate_email' });
+        setError('That email is already registered');
+      } else if (code === 'SQIRL-AUTH-REG-003') {
+        analytics.track('auth.register_failed', { reason: 'duplicate_phone' });
+        setError('That phone number is already registered');
+      } else {
+        analytics.track('auth.register_failed', { reason: 'unknown' });
+        setError('Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

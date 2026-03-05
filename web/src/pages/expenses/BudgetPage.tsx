@@ -13,6 +13,7 @@ import { useHouseholdStore } from '../../store/householdStore';
 import { useAuthStore } from '../../store/authStore';
 import { useExpensesStore } from '../../store/expensesStore';
 import type { ExpenseCategory, ExpenseBudget, ExpenseScope } from '@sqirl/shared';
+import { analytics } from '../../lib/analyticsService';
 
 function flattenTree(cats: ExpenseCategory[]): ExpenseCategory[] {
   const out: ExpenseCategory[] = [];
@@ -76,6 +77,7 @@ export default function BudgetPage() {
     setSaving((s) => ({ ...s, [cat.id]: true }));
     try {
       const res = await api.setExpenseBudget(cat.id, { scope, budgetMonth: month, amount });
+      analytics.track('expense.budget_set', { categoryId: cat.id, scope, budgetMonth: month, amount });
       const updated = res.budget;
       if (scope === 'personal') {
         setPersonalBudgets(budgets.some((b) => b.categoryId === cat.id)
@@ -97,7 +99,8 @@ export default function BudgetPage() {
   async function handleCarryForward() {
     setCarrying(true);
     try {
-      await api.carryForwardExpenseBudgets({ scope, fromMonth: prevMonthStr(month), toMonth: month });
+      const cfRes = await api.carryForwardExpenseBudgets({ scope, fromMonth: prevMonthStr(month), toMonth: month });
+      analytics.track('expense.budget_carry_forward', { scope, toMonth: month, count: cfRes.count });
       await load();
     } catch {
       // ignore

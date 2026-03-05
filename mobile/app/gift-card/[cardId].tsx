@@ -25,6 +25,8 @@ import { api } from '../../src/lib/api';
 import { getGiftBrandById } from '@sqirl/shared';
 import type { GiftCard, GiftCardTransaction, BarcodeFormat } from '@sqirl/shared';
 import { encodeCode128, generateQrMatrix } from '../../src/lib/barcodeRenderer';
+import { colors, typography, spacing, borderRadius, shadows } from '../../constants/designTokens';
+import { analytics } from '../../src/lib/analyticsService';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const BARCODE_W = SCREEN_W - 64;
@@ -92,6 +94,7 @@ function UpdateBalanceModal({ card, onSave, onClose }: {
     setSaving(true);
     try {
       const { card: updated, transaction } = await api.updateGiftCardBalance(card.id, { newBalance: n, note: note.trim() || undefined });
+      analytics.track('gift_card.balance_updated', { brandId: card.brandId, newBalance: n, delta: n - card.balance });
       onSave(updated, transaction);
     } catch { Alert.alert('Failed to update balance'); }
     finally { setSaving(false); }
@@ -139,13 +142,14 @@ function AddTransactionModal({ card, onSave, onClose }: {
     if (!date) { Alert.alert('Date is required'); return; }
     setSaving(true);
     try {
-      const { card: updated, transaction } = await api.addGiftCardTransaction(card.id, {
+      const { card: updated, transaction, expenseId } = await api.addGiftCardTransaction(card.id, {
         amount: amtNum,
         transactionDate: new Date(date).toISOString(),
         location: location.trim() || undefined,
         description: description.trim() || undefined,
         addAsExpense: isSpend && addAsExpense,
       });
+      analytics.track('gift_card.transaction_added', { brandId: card.brandId, transactionType: amtNum < 0 ? 'spend' : 'reload', amount: amtNum, transactionDate: date, addedAsExpense: !!expenseId });
       onSave(updated, transaction);
     } catch { Alert.alert('Failed to record transaction'); }
     finally { setSaving(false); }
@@ -236,7 +240,7 @@ export default function GiftCardDetailScreen() {
     Alert.alert('Archive Card', 'Archive this gift card?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Archive', style: 'destructive', onPress: async () => {
-        try { const { card: updated } = await api.archiveGiftCard(card.id); setCard(updated); }
+        try { const { card: updated } = await api.archiveGiftCard(card.id); analytics.track('gift_card.archived', { brandId: card.brandId, balance: card.balance }); setCard(updated); }
         catch { Alert.alert('Failed to archive'); }
       }},
     ]);
@@ -247,13 +251,13 @@ export default function GiftCardDetailScreen() {
     Alert.alert('Delete Card', 'Delete this gift card? This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await api.deleteGiftCard(card.id); router.back(); }
+        try { await api.deleteGiftCard(card.id); analytics.track('gift_card.deleted', { brandId: card.brandId }); router.back(); }
         catch { Alert.alert('Failed to delete'); }
       }},
     ]);
   }
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} color="#60a5fa" />;
+  if (loading) return <ActivityIndicator style={{ flex: 1 }} color={colors.primary[400]} />;
   if (!card) return (
     <View style={s.center}>
       <Text style={s.notFound}>Gift card not found</Text>
@@ -349,55 +353,55 @@ export default function GiftCardDetailScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  screen:          { flex: 1, backgroundColor: '#f9fafb' },
-  center:          { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  notFound:        { fontSize: 15, color: '#6b7280', marginBottom: 12 },
-  back:            { fontSize: 14, color: '#60a5fa', textDecorationLine: 'underline' },
-  topCard:         { margin: 16, padding: 20, backgroundColor: '#fff', borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-  logo:            { width: 64, height: 64, borderRadius: 16, backgroundColor: '#f9fafb', marginBottom: 8 },
-  brandName:       { fontSize: 20, fontWeight: '700', color: '#1f2937', marginBottom: 4 },
-  archBadge:       { fontSize: 11, color: '#9ca3af', backgroundColor: '#f3f4f6', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 8 },
-  balance:         { fontSize: 40, fontWeight: '800', color: '#1f2937', marginTop: 8 },
-  balanceLabel:    { fontSize: 13, color: '#9ca3af', marginBottom: 12 },
-  metaRow:         { flexDirection: 'row', gap: 24, marginTop: 4 },
-  metaItem:        { alignItems: 'center' },
-  metaLabel:       { fontSize: 11, color: '#9ca3af', marginBottom: 2 },
-  metaValue:       { fontSize: 14, fontWeight: '600', color: '#374151', fontFamily: 'monospace' },
-  pinRow:          { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pinEye:          { fontSize: 14 },
-  barcodeCard:     { marginHorizontal: 16, marginBottom: 12, padding: 24, backgroundColor: '#fff', borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  cardNum:         { fontFamily: 'monospace', fontSize: 13, color: '#6b7280', marginTop: 10, letterSpacing: 2 },
-  actionsGrid:     { marginHorizontal: 16, marginBottom: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  actionBtn:       { flex: 1, minWidth: '45%', padding: 14, borderRadius: 14, alignItems: 'center' },
-  actionPrimary:   { backgroundColor: '#60a5fa' },
-  actionPrimaryTxt:{ fontSize: 14, fontWeight: '600', color: '#fff' },
-  actionOutline:   { borderWidth: 1.5, borderColor: '#60a5fa' },
-  actionOutlineTxt:{ fontSize: 14, fontWeight: '600', color: '#60a5fa' },
-  actionGhost:     { borderWidth: 1, borderColor: '#d1d5db' },
-  actionGhostTxt:  { fontSize: 14, fontWeight: '500', color: '#6b7280' },
-  actionDanger:    { borderWidth: 1, borderColor: '#fca5a5' },
-  actionDangerTxt: { fontSize: 14, fontWeight: '500', color: '#ef4444' },
-  histCard:        { marginHorizontal: 16, backgroundColor: '#fff', borderRadius: 20, padding: 16, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  histTitle:       { fontSize: 16, fontWeight: '600', color: '#1f2937', marginBottom: 8 },
-  histEmpty:       { fontSize: 13, color: '#9ca3af' },
-  txnRow:          { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
-  txnType:         { fontSize: 13, fontWeight: '600', color: '#374151', textTransform: 'capitalize' },
-  txnNote:         { fontSize: 11, color: '#9ca3af' },
-  txnDate:         { fontSize: 11, color: '#d1d5db', marginTop: 2 },
-  txnAmt:          { fontSize: 14, fontWeight: '700' },
-  txnAfter:        { fontSize: 11, color: '#9ca3af' },
-  bcFallback:      { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb', borderRadius: 8 },
-  bcFallbackTxt:   { fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' },
+  screen:           { flex: 1, backgroundColor: colors.background.canvas },
+  center:           { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  notFound:         { fontSize: typography.fontSize.md + 1, color: colors.text.muted, marginBottom: spacing.md },
+  back:             { fontSize: typography.fontSize.md, color: colors.primary[400], textDecorationLine: 'underline' },
+  topCard:          { margin: spacing.base, padding: spacing.lg, backgroundColor: colors.background.surface, borderRadius: borderRadius.xl, alignItems: 'center', ...shadows.sm },
+  logo:             { width: 64, height: 64, borderRadius: borderRadius.xl, backgroundColor: colors.background.canvas, marginBottom: spacing.xs },
+  brandName:        { fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.text.default, marginBottom: spacing.xs },
+  archBadge:        { fontSize: typography.fontSize.xs, color: colors.text.subtle, backgroundColor: colors.neutral[100], borderRadius: borderRadius.pill, paddingHorizontal: spacing.xs, paddingVertical: 2, marginBottom: spacing.xs },
+  balance:          { fontSize: 40, fontWeight: '800', color: colors.text.default, marginTop: spacing.xs },
+  balanceLabel:     { fontSize: typography.fontSize.sm, color: colors.text.subtle, marginBottom: spacing.md },
+  metaRow:          { flexDirection: 'row', gap: 24, marginTop: spacing.xs },
+  metaItem:         { alignItems: 'center' },
+  metaLabel:        { fontSize: typography.fontSize.xs, color: colors.text.subtle, marginBottom: 2 },
+  metaValue:        { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.neutral[700], fontFamily: 'monospace' },
+  pinRow:           { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  pinEye:           { fontSize: typography.fontSize.md },
+  barcodeCard:      { marginHorizontal: spacing.base, marginBottom: spacing.md, padding: spacing.lg, backgroundColor: colors.background.surface, borderRadius: borderRadius.xl, alignItems: 'center', ...shadows.sm },
+  cardNum:          { fontFamily: 'monospace', fontSize: typography.fontSize.sm, color: colors.text.muted, marginTop: spacing.md, letterSpacing: 2 },
+  actionsGrid:      { marginHorizontal: spacing.base, marginBottom: spacing.md, flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  actionBtn:        { flex: 1, minWidth: '45%', padding: spacing.md, borderRadius: borderRadius.lg, alignItems: 'center' },
+  actionPrimary:    { backgroundColor: colors.primary[400] },
+  actionPrimaryTxt: { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.text.inverse },
+  actionOutline:    { borderWidth: 1.5, borderColor: colors.primary[400] },
+  actionOutlineTxt: { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.primary[400] },
+  actionGhost:      { borderWidth: 1, borderColor: colors.border.strong },
+  actionGhostTxt:   { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: colors.text.muted },
+  actionDanger:     { borderWidth: 1, borderColor: colors.error.light },
+  actionDangerTxt:  { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: colors.error.default },
+  histCard:         { marginHorizontal: spacing.base, backgroundColor: colors.background.surface, borderRadius: borderRadius.xl, padding: spacing.base, ...shadows.sm },
+  histTitle:        { fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold, color: colors.text.default, marginBottom: spacing.xs },
+  histEmpty:        { fontSize: typography.fontSize.sm, color: colors.text.subtle },
+  txnRow:           { flexDirection: 'row', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.background.canvas },
+  txnType:          { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.semibold, color: colors.neutral[700], textTransform: 'capitalize' },
+  txnNote:          { fontSize: typography.fontSize.xs, color: colors.text.subtle },
+  txnDate:          { fontSize: typography.fontSize.xs, color: colors.border.strong, marginTop: 2 },
+  txnAmt:           { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.bold },
+  txnAfter:         { fontSize: typography.fontSize.xs, color: colors.text.subtle },
+  bcFallback:       { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.canvas, borderRadius: borderRadius.md },
+  bcFallbackTxt:    { fontSize: typography.fontSize.xs, color: colors.text.subtle, fontFamily: 'monospace' },
   // Modal
-  modal:           { flex: 1, padding: 20, backgroundColor: '#fff' },
-  modalTitle:      { fontSize: 20, fontWeight: '700', color: '#1f2937', marginBottom: 16 },
-  label:           { fontSize: 13, fontWeight: '500', color: '#374151', marginBottom: 4 },
-  input:           { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 10, fontSize: 14, marginBottom: 14, color: '#1f2937' },
-  switchRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  switchLabel:     { fontSize: 14, color: '#374151' },
-  btns:            { flexDirection: 'row', gap: 10, marginTop: 8 },
-  cancelBtn:       { flex: 1, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#d1d5db', alignItems: 'center' },
-  cancelTxt:       { fontSize: 14, fontWeight: '500', color: '#374151' },
-  primaryBtn:      { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#60a5fa', alignItems: 'center' },
-  primaryTxt:      { fontSize: 14, fontWeight: '600', color: '#fff' },
+  modal:            { flex: 1, padding: spacing.lg, backgroundColor: colors.background.surface },
+  modalTitle:       { fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color: colors.text.default, marginBottom: spacing.base },
+  label:            { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.neutral[700], marginBottom: spacing.xs },
+  input:            { borderWidth: 1, borderColor: colors.border.strong, borderRadius: borderRadius.md, padding: spacing.md, fontSize: typography.fontSize.md, marginBottom: spacing.md, color: colors.text.default },
+  switchRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.base },
+  switchLabel:      { fontSize: typography.fontSize.md, color: colors.neutral[700] },
+  btns:             { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  cancelBtn:        { flex: 1, padding: spacing.md, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border.strong, alignItems: 'center' },
+  cancelTxt:        { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: colors.neutral[700] },
+  primaryBtn:       { flex: 1, padding: spacing.md, borderRadius: borderRadius.lg, backgroundColor: colors.primary[400], alignItems: 'center' },
+  primaryTxt:       { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.text.inverse },
 });

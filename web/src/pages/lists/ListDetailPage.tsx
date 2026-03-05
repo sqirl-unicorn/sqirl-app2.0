@@ -17,6 +17,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useListsStore } from '../../store/listsStore';
 import * as wsClient from '../../lib/wsClient';
+import { analytics } from '../../lib/analyticsService';
 import type { ListItem, ShoppingList } from '@sqirl/shared';
 
 interface ItemFormState {
@@ -79,6 +80,11 @@ export default function ListDetailPage() {
         unit: form.unit || undefined,
         quantity: form.quantity ? Number(form.quantity) : undefined,
       });
+      analytics.track('list.item_added', {
+        listType: list?.listType,
+        hasQuantity: !!form.quantity,
+        hasUnit: !!form.unit,
+      });
       setItems([...items, item]);
       setForm(EMPTY_FORM);
       setAddingItem(false);
@@ -94,6 +100,7 @@ export default function ListDetailPage() {
     try {
       setActionLoading(item.id);
       const { item: updated } = await api.updateListItem(listId, item.id, { isPurchased: !item.isPurchased });
+      if (!item.isPurchased) analytics.track('list.item_purchased', { listType: list?.listType });
       setItems(items.map((i) => (i.id === updated.id ? updated : i)));
     } catch {
       setError('Failed to update item');

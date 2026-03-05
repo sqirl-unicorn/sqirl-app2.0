@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useListsStore } from '../../store/listsStore';
 import * as wsClient from '../../lib/wsClient';
+import { analytics } from '../../lib/analyticsService';
 import type { ShoppingList, ListType } from '@sqirl/shared';
 
 const TABS: { key: ListType; label: string }[] = [
@@ -55,6 +56,7 @@ export default function ListsPage() {
     try {
       setActionLoading('create');
       const { list } = await api.createList({ name: newName.trim(), listType: activeTab });
+      analytics.track('list.created', { listType: activeTab });
       setLists([list, ...lists]);
       setNewName('');
       setCreating(false);
@@ -87,6 +89,8 @@ export default function ListsPage() {
     try {
       setActionLoading(listId);
       await api.deleteList(listId);
+      const deleted = lists.find((l) => l.id === listId);
+      if (deleted) analytics.track('list.deleted', { listType: deleted.listType });
       setLists(lists.filter((l) => l.id !== listId));
     } catch {
       setError('Failed to delete list');

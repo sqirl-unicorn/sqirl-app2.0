@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import * as wsClient from '../../src/lib/wsClient';
+import { analytics } from '../../src/lib/analyticsService';
 import {
   View, Text, ScrollView, TouchableOpacity, FlatList, StyleSheet,
   Pressable, Modal, TextInput, Alert, ActivityIndicator, Switch,
@@ -116,9 +117,11 @@ function ExpenseFormModal({
       if (mode === 'add') {
         const res = await api.addExpense({ scope, categoryId, amount: amtNum, description: description.trim(), expenseDate, business: business || undefined, location: location || undefined, notes: notes || undefined });
         saved = res.expense;
+        analytics.track('expense.added', { amount: amtNum, categoryId, scope, expenseDate, hasLocation: !!location, hasBusiness: !!business, hasNotes: !!notes });
       } else {
         const res = await api.updateExpense(initialData!.id!, { categoryId, amount: amtNum, description: description.trim(), expenseDate, business: business || null, location: location || null, notes: notes || null });
         saved = res.expense;
+        analytics.track('expense.updated', { expenseId: initialData!.id, scope, amount: amtNum, categoryId });
       }
       onSaved(saved);
     } catch {
@@ -136,6 +139,7 @@ function ExpenseFormModal({
         onPress: async () => {
           try {
             await api.deleteExpense(initialData!.id!);
+            analytics.track('expense.deleted', { expenseId: initialData!.id });
             onDeleted?.(initialData!.id!);
           } catch {
             Alert.alert('Error', 'Failed to delete.');
@@ -264,6 +268,7 @@ function MoveModal({
       for (const exp of expenses) {
         const res = await api.moveExpense(exp.id, { targetScope, targetCategoryId: overrides[exp.id] || undefined });
         moved.push(res.expense);
+        analytics.track('expense.moved', { expenseId: exp.id, toScope: targetScope });
       }
       onMoved(moved);
     } catch {

@@ -25,6 +25,7 @@ import { useHouseholdStore } from '../../store/householdStore';
 import { useExpensesStore } from '../../store/expensesStore';
 import type { Expense, ExpenseCategory, ExpenseScope } from '@sqirl/shared';
 import * as wsClient from '../../lib/wsClient';
+import { analytics } from '../../lib/analyticsService';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 
@@ -449,6 +450,16 @@ function ExpenseFormModal({ mode, scope, categories, initialData, onClose, onSav
           notes: form.notes || undefined,
         });
         saved = res.expense;
+        analytics.track('expense.added', {
+          amount: amountNum,
+          categoryId: form.categoryId,
+          scope,
+          expenseDate: form.expenseDate,
+          hasLocation: !!form.location,
+          hasBusiness: !!form.business,
+          hasNotes: !!form.notes,
+          hasQuantity: !!form.quantity,
+        });
       } else {
         const res = await api.updateExpense(initialData!.id!, {
           categoryId: form.categoryId || null,
@@ -463,6 +474,12 @@ function ExpenseFormModal({ mode, scope, categories, initialData, onClose, onSav
           notes: form.notes || null,
         });
         saved = res.expense;
+        analytics.track('expense.updated', {
+          expenseId: initialData!.id,
+          scope,
+          amount: amountNum,
+          categoryId: form.categoryId,
+        });
       }
       onSaved(saved);
     } catch {
@@ -477,6 +494,7 @@ function ExpenseFormModal({ mode, scope, categories, initialData, onClose, onSav
     setDeleting(true);
     try {
       await api.deleteExpense(initialData.id);
+      analytics.track('expense.deleted', { expenseId: initialData.id });
       onDeleted(initialData.id);
     } catch {
       setError('Failed to delete expense.');
@@ -631,6 +649,7 @@ function MoveModal({ expenses, targetScope, targetCategories, onClose, onMoved }
           targetCategoryId: overrides[exp.id] || undefined,
         });
         moved.push(res.expense);
+        analytics.track('expense.moved', { expenseId: exp.id, toScope: targetScope });
       }
       onMoved(moved);
     } catch {

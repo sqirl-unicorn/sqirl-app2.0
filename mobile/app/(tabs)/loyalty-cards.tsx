@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as wsClient from '../../src/lib/wsClient';
+import { analytics } from '../../src/lib/analyticsService';
 import { Svg, Rect, G } from 'react-native-svg';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../../src/lib/api';
@@ -325,6 +326,7 @@ export default function LoyaltyCardsScreen() {
 
   const handleAdd = async (d: { brandId: string; cardNumber: string; barcodeFormat: BarcodeFormat; notes: string }) => {
     const { card } = await api.addLoyaltyCard({ brandId: d.brandId, cardNumber: d.cardNumber, barcodeFormat: d.barcodeFormat, notes: d.notes || undefined });
+    analytics.track('loyalty_card.added', { brandId: d.brandId, barcodeFormat: d.barcodeFormat });
     setCards((prev) => [card, ...prev]); setShowAdd(false);
   };
 
@@ -335,7 +337,9 @@ export default function LoyaltyCardsScreen() {
   };
 
   const handleDelete = async (cardId: string) => {
+    const deletedCard = cards.find((c) => c.id === cardId);
     await api.deleteLoyaltyCard(cardId);
+    if (deletedCard) analytics.track('loyalty_card.deleted', { brandId: deletedCard.brandId });
     setCards((prev) => prev.filter((c) => c.id !== cardId));
   };
 

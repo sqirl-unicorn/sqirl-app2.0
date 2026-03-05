@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api } from '../../src/lib/api';
+import { colors, typography, spacing, borderRadius, shadows } from '../../constants/designTokens';
 import { useHouseholdStore } from '../../src/store/householdStore';
+import { analytics } from '../../src/lib/analyticsService';
 
 export default function InviteScreen() {
   const router = useRouter();
@@ -36,6 +38,7 @@ export default function InviteScreen() {
         householdId: household?.id,
         expiryDays,
       });
+      analytics.track('household.invite_sent', { identifierType: mode, expiryDays });
       Alert.alert('Sent!', 'Invitation sent successfully.', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (err) {
       const e = err as Error;
@@ -110,20 +113,20 @@ export default function InviteScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24 },
-  subtitle: { fontSize: 14, color: '#6b7280', marginBottom: 20 },
-  toggle: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 12, padding: 4, marginBottom: 16 },
-  toggleBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
-  toggleActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  toggleText: { fontSize: 14, color: '#6b7280', fontWeight: '500' },
-  toggleTextActive: { color: '#111827', fontWeight: '600' },
-  input: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, marginBottom: 20, backgroundColor: '#fff' },
-  label: { fontSize: 13, color: '#6b7280', marginBottom: 10 },
-  expiryRow: { flexDirection: 'row', gap: 8, marginBottom: 32 },
-  expiryBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#fff' },
-  expiryBtnActive: { backgroundColor: '#60a5fa', borderColor: '#60a5fa' },
-  expiryText: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
-  expiryTextActive: { color: '#fff', fontWeight: '600' },
-  sendBtn: { backgroundColor: '#60a5fa', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  sendBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  container:        { padding: spacing.lg },
+  subtitle:         { fontSize: typography.fontSize.md, color: colors.text.muted, marginBottom: spacing.lg },
+  toggle:           { flexDirection: 'row', backgroundColor: colors.neutral[100], borderRadius: borderRadius.lg, padding: spacing.xs, marginBottom: spacing.base },
+  toggleBtn:        { flex: 1, paddingVertical: spacing.xs, borderRadius: borderRadius.md, alignItems: 'center' },
+  toggleActive:     { backgroundColor: colors.background.surface, ...shadows.sm },
+  toggleText:       { fontSize: typography.fontSize.md, color: colors.text.muted, fontWeight: typography.fontWeight.medium },
+  toggleTextActive: { color: colors.text.default, fontWeight: typography.fontWeight.semibold },
+  input:            { borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.lg, paddingHorizontal: spacing.base, paddingVertical: spacing.md, fontSize: typography.fontSize.md + 1, marginBottom: spacing.lg, backgroundColor: colors.background.surface },
+  label:            { fontSize: typography.fontSize.sm, color: colors.text.muted, marginBottom: spacing.md },
+  expiryRow:        { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xl },
+  expiryBtn:        { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.border.soft, backgroundColor: colors.background.surface },
+  expiryBtnActive:  { backgroundColor: colors.primary[400], borderColor: colors.primary[400] },
+  expiryText:       { fontSize: typography.fontSize.sm, color: colors.text.muted, fontWeight: typography.fontWeight.medium },
+  expiryTextActive: { color: colors.text.inverse, fontWeight: typography.fontWeight.semibold },
+  sendBtn:          { backgroundColor: colors.primary[400], borderRadius: borderRadius.lg, paddingVertical: spacing.base, alignItems: 'center' },
+  sendBtnText:      { color: colors.text.inverse, fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.bold },
 });

@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useHouseholdStore } from '../../store/householdStore';
+import { analytics } from '../../lib/analyticsService';
 
 export default function InvitePage() {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ export default function InvitePage() {
         householdId: household?.id,
         expiryDays,
       });
+      analytics.track('household.invite_sent', { identifierType: mode, expiryDays });
       setSent(true);
     } catch (err) {
       const e = err as Error;

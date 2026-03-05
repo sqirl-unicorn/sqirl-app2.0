@@ -1,7 +1,7 @@
 # Backend Index — sqirl-app2
 
 ## Shared Package (`shared/src/`)
-- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`, `ShoppingList`, `ListItem`, `TodoTask`, `TodoSubtask`, `ListType`, `CreateListPayload`, `CreateListItemPayload`, `UpdateListItemPayload`, `CreateTodoTaskPayload`, `UpdateTodoTaskPayload`, `CreateTodoSubtaskPayload`, `UpdateTodoSubtaskPayload`, `ScanListResponse`, `BarcodeFormat`, `LoyaltyCard`, `CreateLoyaltyCardPayload`, `UpdateLoyaltyCardPayload`, `GiftCard`, `GiftCardTransaction`, `CreateGiftCardPayload`, `UpdateGiftCardPayload`, `UpdateGiftCardBalancePayload`, `AddGiftCardTransactionPayload`, `ExpenseScope`, `ExpenseCategory`, `ExpenseBudget`, `Expense`, `CreateExpensePayload`, `UpdateExpensePayload`, `MoveExpensePayload`, `MoveCheckResult`, `SetBudgetPayload`, `CreateExpenseCategoryPayload`, `UpdateExpenseCategoryPayload`
+- `types.ts` — all shared API interfaces: `AuthUser`, `AuthTokens`, `RegisterPayload`, `RegisterResponse`, `LoginPayload`, `LoginResponse`, `Country`, `HouseholdMember`, `HouseholdResponse`, `InvitationResponse`, `CopyScope`, `CopyRequestResponse`, `NotificationResponse`, `ShoppingList`, `ListItem`, `TodoTask`, `TodoSubtask`, `ListType`, `CreateListPayload`, `CreateListItemPayload`, `UpdateListItemPayload`, `CreateTodoTaskPayload`, `UpdateTodoTaskPayload`, `CreateTodoSubtaskPayload`, `UpdateTodoSubtaskPayload`, `ScanListResponse`, `BarcodeFormat`, `LoyaltyCard`, `CreateLoyaltyCardPayload`, `UpdateLoyaltyCardPayload`, `GiftCard`, `GiftCardTransaction`, `CreateGiftCardPayload`, `UpdateGiftCardPayload`, `UpdateGiftCardBalancePayload`, `AddGiftCardTransactionPayload`, `ExpenseScope`, `ExpenseCategory`, `ExpenseBudget`, `Expense`, `CreateExpensePayload`, `UpdateExpensePayload`, `MoveExpensePayload`, `MoveCheckResult`, `SetBudgetPayload`, `CreateExpenseCategoryPayload`, `UpdateExpenseCategoryPayload`, `AnalyticsEventPayload`, `AnalyticsBatchPayload`
 - `createApiClient.ts` — `createApiClient(getToken, baseUrl)→ApiClient`; all API methods, platform-agnostic (pure fetch). Import via alias `@sqirl/shared`.
 - `index.ts` — barrel re-export of types + `createApiClient` + `ApiClient` type + `LOYALTY_BRANDS`, `getBrandsForCountry`, `getBrandById`, `LoyaltyBrand` + `GIFT_BRANDS`, `getGiftBrandsForCountry`, `getGiftBrandById`, `GiftBrand`
 - `loyaltyBrands.ts` — `LOYALTY_BRANDS[]` (150+ brands AU/CA/US/UK/EU); `getBrandsForCountry(code)→[]`; `getBrandById(id)→brand|undefined`
@@ -10,8 +10,12 @@
 
 ## Core Files
 - `src/db.ts` — `pool` (pg Pool, Neon, SSL). Errors: SQIRL-SYS-DB-001/002
-- `src/app.ts` — Express app. Routes: /health, /api/v1/auth/*, /api/v1/profile/*, /api/v1/household/*, /api/v1/invitations/*, /api/v1/notifications/*, /api/v1/lists/*, /api/v1/loyalty-cards/*, /api/v1/gift-cards/*
-- `src/server.ts` — Entry point, DB check on startup
+- `src/app.ts` — Express app. Routes: /health, /api/v1/auth/*, /api/v1/profile/*, /api/v1/household/*, /api/v1/invitations/*, /api/v1/notifications/*, /api/v1/lists/*, /api/v1/loyalty-cards/*, /api/v1/gift-cards/*, /api/v1/expenses/*, /api/v1/analytics/*
+- `src/server.ts` — Entry point, DB check on startup; wraps Express in `http.createServer`; attaches WS server via `initWs(server)`
+
+## WebSocket
+- `src/ws/wsEvents.ts` — `WsEventType` union (`lists:changed`|`loyaltyCards:changed`|`giftCards:changed`|`expenses:changed`|`notifications:changed`|`household:changed`|`ping`); `WsMessage` interface
+- `src/ws/wsServer.ts` — `init(server)`, `broadcast(type, userId, householdId?)`, `broadcastToUser(type, userId)`, `verifyWsToken(token)`, `_testHooks`; JWT auth on WS upgrade (`?token=<jwt>`); userId+householdId rooms; 30 s heartbeat
 
 ## Middleware
 - `src/middleware/auth.ts`
@@ -28,6 +32,7 @@
 - `src/routes/loyaltyCards.ts` — GET /, POST / (add), PUT /:cardId (update), DELETE /:cardId (soft-delete)
 - `src/routes/giftCards.ts` — GET /, POST / (add), PUT /:cardId (edit metadata), PUT /:cardId/balance (set balance+record txn), POST /:cardId/transactions (spend/reload), GET /:cardId/transactions, PUT /:cardId/archive, DELETE /:cardId (soft-delete)
 - `src/routes/expenses.ts` — GET /categories, POST /categories, PUT /categories/:id, DELETE /categories/:id, GET /budgets, PUT /budgets/:categoryId, POST /budgets/carry-forward, GET /, POST /, PUT /:id, DELETE /:id, GET /:id/move-check, POST /:id/move
+- `src/routes/analytics.ts` — POST /events (batch ingest, authenticated; max 200 events/call)
 
 ## Services
 - `src/services/authService.ts` — hashPassword, verifyPassword, generateToken, decodeToken, createUser, findUserForLogin, findUserById, saveRecoveryKeySlots, updateUserProfile
@@ -40,6 +45,10 @@
   - DB ops: `getHousehold(userId)`, `createHousehold(name,isTest)`, `addMember(hhId,userId,role,isTest)`, `getMembership(hhId,userId)`, `getMemberCount(hhId)`, `getOwnerCount(hhId)`, `renameHousehold(hhId,name)`, `promoteToOwner(hhId,userId)`, `demoteToMember(hhId,userId)`, `removeMember(hhId,userId)→{autoDeleted}`, `exitHousehold(userId)→{autoDeleted,householdId}`, `createInvitation(params)`, `getInvitationByToken(token)`, `getInvitationById(id)`, `acceptInvitation(token,userId,isTest)→{household,created}`, `declineInvitation(id)`, `getMyInvitations(userId)`, `getSentInvitations(hhId)`, `cancelAllInvitations(hhId)`, `createCopyRequest(hhId,requesterId,scope,isTest)`, `reviewCopyRequest(id,reviewerId,approved,scope?)`, `getPendingCopyRequests(hhId)`, `recordCopyGrant(params)`
 - `src/services/notificationService.ts`
   - `createNotification(userId,type,title,message,data?,isTest?)`, `notifyMany(userIds,...)`, `getNotifications(userId,unreadOnly?)`, `markRead(id,userId)`, `markAllRead(userId)`, `getUnreadCount(userId)`
+- `src/services/analyticsService.ts`
+  - Constants: `MAX_BATCH_SIZE=200`, `PII_KEYS` (set of keys always stripped)
+  - Pure helpers: `isValidPlatform(p)→bool`, `isValidEventType(t)→bool`, `sanitizeProperties(props)→props` (strips PII keys)
+  - DB ops: `batchInsertEvents(userId,events[],isTestData)→count` (unnest batch insert), `getRecentEvents(userId,limit?)→AnalyticsEventRow[]`
 - `src/services/loyaltyCardService.ts`
   - Pure helpers: `isValidBarcodeFormat(format)→bool`, `canAccessCard(userId,hhId,card)→bool`
   - DB ops: `getCards(userId)`, `addCard(userId,brandId,cardNumber,format,notes?,clientId?,isTest?)`, `updateCard(cardId,userId,fields)`, `deleteCard(cardId,userId)`
@@ -65,8 +74,11 @@
 - `011-expense-categories.sql` — expense_categories (parent_id self-ref, household_id, owner_user_id, scope CHECK system|household|personal, name, level CHECK 1|2|3, icon_name, position, sync cols); seeds 7 system categories
 - `012-expense-budgets.sql` — expense_budgets (category_id, household_id, owner_user_id, scope, budget_month DATE, amount NUMERIC); partial unique indexes per scope (personal/household)
 - `013-expenses.sql` — expenses (household_id, owner_user_id, category_id, amount NUMERIC, description, expense_date DATE, pack_size, unit, quantity, business, location, notes, sync cols); adds FK constraint on gift_card_transactions.expense_id
+- `014-analytics.sql` — analytics_events (user_id, session_id, event_type, properties JSONB, platform CHECK web|mobile|tablet, app_version, occurred_at, received_at, is_test_data); indexes on user_id, event_type, occurred_at DESC, session_id
 
 ## Test Files
+- `tests/unit/ws.server.test.ts`                   — 18 tests (broadcast, broadcastToUser, auth, heartbeat cleanup)
+- `tests/integration/ws.broadcast.test.ts`         — 14 tests (routes call broadcast after mutations)
 - `tests/unit/auth.middleware.test.ts`     — 9 tests
 - `tests/unit/auth.service.test.ts`        — 8 tests
 - `tests/unit/geo.service.test.ts`         — 10 tests
@@ -88,7 +100,10 @@
 - `tests/unit/expense.service.test.ts`             — 20 tests
 - `tests/integration/expenses.routes.test.ts`      — 28 tests
 - `tests/e2e/expenses.e2e.test.ts`                 — 15 tests
-Total: **404 tests passing**
+- `tests/unit/analytics.service.test.ts`           — 15 tests (isValidPlatform, isValidEventType, sanitizeProperties, MAX_BATCH_SIZE)
+- `tests/integration/analytics.routes.test.ts`     — 9 tests (auth, validation, batch insert, PII strip, test-data flag)
+- `tests/e2e/analytics.e2e.test.ts`                — 5 tests (full flow, JSONB query, test-data isolation)
+Total: **465 tests passing**
 
 ## Test Infrastructure
 - `tests/fixtures/personas.ts` — 6 personas (alice/bob/carol/dave/eve/frank). All is_test_user:true.
@@ -170,3 +185,7 @@ Total: **404 tests passing**
 | SQIRL-EXP-MOVE-002 | expenseService | Category mismatch: targetCategoryId required |
 | SQIRL-EXP-MOVE-003 | expenses route | Only household owners can push HH→personal |
 | SQIRL-EXP-SERVER-001 | expenses route | Unexpected server error |
+| SQIRL-ANALYTIC-001 | analytics route | events missing or not a non-empty array |
+| SQIRL-ANALYTIC-002 | analytics route | batch size exceeds MAX_BATCH_SIZE (200) |
+| SQIRL-ANALYTIC-003 | analytics route | no valid events remain after filtering |
+| SQIRL-ANALYTIC-SERVER-001 | analytics route | Unexpected server error |

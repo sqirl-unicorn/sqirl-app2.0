@@ -8,11 +8,13 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 ### Lib
 - `src/lib/cryptoService.ts` — `generateUserKeys(pw)`, `unlockPrivateKey(pw,epk,salt)`, `generateRecoveryKeys(masterKey)→{keys[5],slots[5]}`, `formatRecoveryKey(raw)`, `recoverMasterKey(key,slot)`, `encrypt/decrypt`
 - `src/lib/api.ts` — thin wrapper: calls `createApiClient` from `@sqirl/shared` with zustand token getter + `/api/v1` base. Re-exports all types from `@sqirl/shared`.
+- `src/lib/wsClient.ts` — singleton WS client; `connect(token)`, `disconnect()`, `on(type, cb)→unsub`; exponential backoff reconnect (1s→30s); VITE_API_URL or origin fallback
+- `src/lib/analyticsService.ts` — `analytics` singleton; `track(eventType, props)`, `flush()`, `setOptOut(bool)`, `isOptedOut()`; localStorage offline queue; 30 s auto-flush + `beforeunload` flush; no PII in props
 
 ### Stores
 - `src/store/authStore.ts` — `user, tokens, encryptedPrivateKey, salt` (persisted to localStorage). `masterKey` (in-memory only, never persisted).
 - `src/store/householdStore.ts` — `household, receivedInvitations, notifications, unreadCount` + setters. In-memory only (no persistence).
-- `src/store/listsStore.ts` — `lists, activeListId, items, tasks` + setters. In-memory; polls 30 s for household updates.
+- `src/store/listsStore.ts` — `lists, activeListId, items, tasks` + setters. In-memory; real-time via WS.
 - `src/store/expensesStore.ts` — `personalCategories, householdCategories, personalBudgets, householdBudgets, personalExpenses, householdExpenses, pendingSyncIds: Set<string>` + setters. In-memory only.
 
 ### Pages
@@ -55,6 +57,7 @@ Vite 5 + React 18 + TailwindCSS 3 + react-router-dom v6 + zustand v4 + TweetNaCl
 - `e2e/lists.e2e.ts` — create/rename/delete across all 3 tabs, cancel, navigate to detail (8 tests)
 - `e2e/gift-cards.e2e.ts` — add card, navigate to detail, update balance, add transaction, archive, archived tab, PIN masking, delete (8 tests)
 - `e2e/expenses.e2e.ts` — load personal tab, date/category view toggle, month nav, add expense modal, add personal expense, budget page (category table, carry forward, inline save), categories page (system cats visible, scope tabs)
+- `e2e/analytics.e2e.ts` — intercepts /api/v1/analytics/events; verifies auth.login event fires on login, auth.login_failed on bad password, auth.logout on logout; verifies no PII in properties (4 tests)
 - `e2e/.gitignore` — ignores `.auth/` (contains JWT tokens)
 - Scripts: `test:e2e` (headless), `test:e2e:headed`, `test:e2e:ui`
 - Prerequisites: backend on :3000 must be running; Vite auto-started by config

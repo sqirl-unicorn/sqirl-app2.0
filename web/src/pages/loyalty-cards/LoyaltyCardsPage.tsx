@@ -24,6 +24,7 @@ import { LOYALTY_BRANDS, getBrandById, getBrandsForCountry } from '@sqirl/shared
 import type { LoyaltyCard, BarcodeFormat, LoyaltyBrand } from '@sqirl/shared';
 import { useAuthStore } from '../../store/authStore';
 import * as wsClient from '../../lib/wsClient';
+import { analytics } from '../../lib/analyticsService';
 
 // ── Barcode renderer ──────────────────────────────────────────────────────────
 
@@ -435,6 +436,7 @@ export default function LoyaltyCardsPage() {
       barcodeFormat: data.barcodeFormat,
       notes: data.notes || undefined,
     });
+    analytics.track('loyalty_card.added', { brandId: data.brandId, barcodeFormat: data.barcodeFormat });
     setCards((prev) => [card, ...prev]);
     setShowModal(false);
   };
@@ -456,7 +458,9 @@ export default function LoyaltyCardsPage() {
   };
 
   const handleDelete = async (cardId: string) => {
+    const deletedCard = cards.find((c) => c.id === cardId);
     await api.deleteLoyaltyCard(cardId);
+    if (deletedCard) analytics.track('loyalty_card.deleted', { brandId: deletedCard.brandId });
     setCards((prev) => prev.filter((c) => c.id !== cardId));
   };
 

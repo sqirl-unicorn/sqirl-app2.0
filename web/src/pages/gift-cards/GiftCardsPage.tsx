@@ -20,6 +20,7 @@ import type { GiftCard, GiftBrand, BarcodeFormat, CreateGiftCardPayload } from '
 import { useAuthStore } from '../../store/authStore';
 import { useGiftCardsStore } from '../../store/giftCardsStore';
 import * as wsClient from '../../lib/wsClient';
+import { analytics } from '../../lib/analyticsService';
 
 // ── Brand Picker ──────────────────────────────────────────────────────────────
 
@@ -137,6 +138,13 @@ function AddCardModal({ userCountry, onClose, onAdded }: AddCardModalProps) {
       if (notes.trim()) payload.notes = notes.trim();
 
       const { card } = await api.addGiftCard(payload);
+      analytics.track('gift_card.added', {
+        brandId: brand.id,
+        balance: balanceNum,
+        hasPin: !!pin.trim(),
+        hasExpiry: !!expiryDate,
+        barcodeFormat,
+      });
       onAdded(card);
     } catch {
       setError('Failed to add gift card. Please try again.');

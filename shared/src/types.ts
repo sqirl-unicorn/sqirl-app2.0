@@ -435,6 +435,33 @@ export interface UpdateExpenseCategoryPayload {
   iconName?: string | null;
 }
 
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+/** A single behavioural event emitted by a client. No PII should be included. */
+export interface AnalyticsEventPayload {
+  /** Client-generated anonymous session UUID (not tied to user identity). */
+  sessionId: string;
+  /** Dot-namespaced action name, e.g. 'expense.added', 'auth.login'. */
+  eventType: string;
+  /**
+   * Non-PII contextual properties.
+   * Safe: amounts, dates, brand IDs, scopes, boolean flags, category IDs.
+   * Never include: email, phone, name, description, notes, cardNumber, pin, location text.
+   */
+  properties: Record<string, unknown>;
+  /** Originating platform. */
+  platform: 'web' | 'mobile' | 'tablet';
+  /** Optional semver app version for cohort analysis. */
+  appVersion?: string;
+  /** Client-side ISO 8601 timestamp of when the event occurred. */
+  occurredAt: string;
+}
+
+/** Request body for the batch analytics ingestion endpoint. */
+export interface AnalyticsBatchPayload {
+  events: AnalyticsEventPayload[];
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────────
 
 export interface NotificationResponse {

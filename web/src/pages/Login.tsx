@@ -8,6 +8,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { cryptoService } from '../lib/cryptoService';
 import { useAuthStore } from '../store/authStore';
+import { analytics } from '../lib/analyticsService';
 
 type IdentifierMode = 'email' | 'phone';
 
@@ -43,14 +44,20 @@ export default function Login() {
       setAuth(res.user, res.tokens, res.encryptedPrivateKey, res.salt);
       setMasterKey(masterKey);
 
+      analytics.track('auth.login', { identifierType: mode, country: res.user.country });
+      void analytics.flush();
+
       navigate(res.user.isAdmin ? '/admin' : '/dashboard');
     } catch (err) {
       const code = err instanceof Error ? err.message : 'LOGIN_FAILED';
       if (code === 'SQIRL-AUTH-CRYPTO-001') {
+        analytics.track('auth.login_failed', { reason: 'wrong_password', identifierType: mode });
         setError('Incorrect password');
       } else if (code === 'SQIRL-AUTH-LOGIN-002') {
+        analytics.track('auth.login_failed', { reason: 'invalid_credentials', identifierType: mode });
         setError('Email or password is incorrect');
       } else {
+        analytics.track('auth.login_failed', { reason: 'unknown', identifierType: mode });
         setError('Login failed. Please try again.');
       }
     } finally {

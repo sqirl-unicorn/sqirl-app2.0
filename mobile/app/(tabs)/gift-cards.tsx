@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api } from '../../src/lib/api';
 import * as wsClient from '../../src/lib/wsClient';
+import { analytics } from '../../src/lib/analyticsService';
 import { GIFT_BRANDS, getGiftBrandsForCountry, getGiftBrandById } from '@sqirl/shared';
 import type { GiftCard, GiftBrand, BarcodeFormat, CreateGiftCardPayload } from '@sqirl/shared';
 import { useAuthStore } from '../../src/store/authStore';
@@ -122,6 +123,7 @@ function AddCardModal({ userCountry, onAdded, onClose }: {
       if (pin.trim()) payload.pin = pin.trim();
       if (expiryDate.trim()) payload.expiryDate = expiryDate.trim();
       const { card } = await api.addGiftCard(payload);
+      analytics.track('gift_card.added', { brandId: brand.id, balance: balanceNum, hasPin: !!pin.trim(), hasExpiry: !!expiryDate.trim(), barcodeFormat });
       onAdded(card);
     } catch { Alert.alert('Failed to add gift card'); }
     finally { setSaving(false); }

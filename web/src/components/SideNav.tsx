@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { NotificationsBell } from './NotificationsBell';
+import { analytics } from '../lib/analyticsService';
 
 interface NavItem {
   label: string;
@@ -26,6 +27,8 @@ export function SideNav() {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   const handleLogout = () => {
+    analytics.track('auth.logout', {});
+    void analytics.flush();
     clearAuth();
     navigate('/login');
   };

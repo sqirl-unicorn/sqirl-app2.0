@@ -23,6 +23,7 @@ import { api } from '../../lib/api';
 import { getGiftBrandById } from '@sqirl/shared';
 import type { GiftCard, GiftCardTransaction, BarcodeFormat, UpdateGiftCardBalancePayload, AddGiftCardTransactionPayload } from '@sqirl/shared';
 import { useGiftCardsStore } from '../../store/giftCardsStore';
+import { analytics } from '../../lib/analyticsService';
 
 // ── Barcode display ───────────────────────────────────────────────────────────
 
@@ -67,6 +68,11 @@ function UpdateBalanceModal({ card, onSave, onClose }: UpdateBalanceModalProps) 
       const payload: UpdateGiftCardBalancePayload = { newBalance: n };
       if (note.trim()) payload.note = note.trim();
       const { card: updated, transaction } = await api.updateGiftCardBalance(card.id, payload);
+      analytics.track('gift_card.balance_updated', {
+        brandId: card.brandId,
+        newBalance: n,
+        delta: n - card.balance,
+      });
       onSave(updated, transaction);
     } catch { setError('Failed to update balance'); }
     finally { setSaving(false); }
@@ -136,6 +142,13 @@ function AddTransactionModal({ card, onSave, onClose }: AddTransactionModalProps
       if (location.trim()) payload.location = location.trim();
       if (description.trim()) payload.description = description.trim();
       const { card: updated, transaction, expenseId } = await api.addGiftCardTransaction(card.id, payload);
+      analytics.track('gift_card.transaction_added', {
+        brandId: card.brandId,
+        transactionType: amountNum < 0 ? 'spend' : 'reload',
+        amount: amountNum,
+        transactionDate: date,
+        addedAsExpense: !!expenseId,
+      });
       onSave(updated, transaction, expenseId);
     } catch { setError('Failed to record transaction'); }
     finally { setSaving(false); }
@@ -275,6 +288,7 @@ export default function GiftCardDetailPage() {
     if (!confirm('Archive this gift card?')) return;
     try {
       const { card: updated } = await api.archiveGiftCard(card.id);
+      analytics.track('gift_card.archived', { brandId: card.brandId, balance: card.balance });
       setCard(updated);
       setCards(cards.map((c) => c.id === updated.id ? updated : c));
     } catch { alert('Failed to archive card'); }
@@ -285,6 +299,7 @@ export default function GiftCardDetailPage() {
     if (!confirm('Delete this gift card? This cannot be undone.')) return;
     try {
       await api.deleteGiftCard(card.id);
+      analytics.track('gift_card.deleted', { brandId: card.brandId });
       setCards(cards.filter((c) => c.id !== card.id));
       navigate('/gift-cards');
     } catch { alert('Failed to delete card'); }

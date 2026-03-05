@@ -15,6 +15,8 @@ import { api } from '../../src/lib/api';
 import { useAuthStore } from '../../src/store/authStore';
 import { useHouseholdStore } from '../../src/store/householdStore';
 import { useExpensesStore } from '../../src/store/expensesStore';
+import { colors, typography, spacing, borderRadius } from '../../constants/designTokens';
+import { analytics } from '../../src/lib/analyticsService';
 import type { ExpenseCategory, ExpenseBudget, ExpenseScope } from '@sqirl/shared';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -103,6 +105,7 @@ export default function BudgetScreen() {
         ? budgets.map((b) => b.categoryId === cat.id ? updated : b)
         : [...budgets, updated];
       scope === 'personal' ? setPersonalBudgets(newBudgets) : setHouseholdBudgets(newBudgets);
+      analytics.track('expense.budget_set', { categoryId: cat.id, scope, budgetMonth: month, amount });
       setEditAmounts((a) => { const n = { ...a }; delete n[cat.id]; return n; });
     } catch {
       Alert.alert('Error', 'Failed to save budget.');
@@ -115,6 +118,7 @@ export default function BudgetScreen() {
     setCarrying(true);
     try {
       await api.carryForwardExpenseBudgets({ scope, fromMonth: prevMonth(month), toMonth: month });
+      analytics.track('expense.budget_carry_forward', { scope, toMonth: month });
       await load();
     } catch {
       Alert.alert('Error', 'Failed to carry forward budgets.');
@@ -146,11 +150,11 @@ export default function BudgetScreen() {
       {/* Month navigator */}
       <View style={styles.monthNav}>
         <TouchableOpacity onPress={() => setMonth(prevMonth(month))} style={styles.monthBtn}>
-          <Ionicons name="chevron-back" size={20} color="#9ca3af" />
+          <Ionicons name="chevron-back" size={20} color={colors.text.subtle} />
         </TouchableOpacity>
         <Text style={styles.monthLabel}>{formatMonth(month)}</Text>
         <TouchableOpacity onPress={() => setMonth(nextMonth(month))} style={styles.monthBtn}>
-          <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+          <Ionicons name="chevron-forward" size={20} color={colors.text.subtle} />
         </TouchableOpacity>
       </View>
 
@@ -170,8 +174,8 @@ export default function BudgetScreen() {
             disabled={carrying}
           >
             {carrying
-              ? <ActivityIndicator size="small" color="#6b7280" />
-              : <Ionicons name="arrow-forward" size={14} color="#6b7280" />
+              ? <ActivityIndicator size="small" color={colors.text.muted} />
+              : <Ionicons name="arrow-forward" size={14} color={colors.text.muted} />
             }
             <Text style={styles.carryBtnText}>Carry Forward from Previous Month</Text>
           </TouchableOpacity>
@@ -230,7 +234,7 @@ export default function BudgetScreen() {
                         disabled={saving[cat.id]}
                       >
                         {saving[cat.id]
-                          ? <ActivityIndicator size="small" color="#fff" />
+                          ? <ActivityIndicator size="small" color={colors.text.inverse} />
                           : <Text style={styles.saveRowBtnText}>Save</Text>
                         }
                       </TouchableOpacity>
@@ -253,27 +257,27 @@ export default function BudgetScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: '#f9fafb' },
-  tabBar:         { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  tab:            { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginRight: 8 },
-  tabActive:      { backgroundColor: '#eff6ff' },
-  tabText:        { fontSize: 14, color: '#9ca3af', fontWeight: '500' },
-  tabTextActive:  { color: '#60a5fa' },
-  monthNav:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  monthBtn:       { paddingHorizontal: 16, paddingVertical: 4 },
-  monthLabel:     { fontSize: 14, fontWeight: '600', color: '#374151', width: 180, textAlign: 'center' },
-  infoBanner:     { flexDirection: 'row', alignItems: 'center', gap: 6, margin: 12, padding: 12, backgroundColor: '#fffbeb', borderRadius: 10, borderWidth: 1, borderColor: '#fde68a' },
-  infoBannerText: { fontSize: 13, color: '#92400e', flex: 1 },
-  carryBtn:       { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, backgroundColor: '#fff' },
-  carryBtnText:   { fontSize: 13, color: '#6b7280' },
-  card:           { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#f3f4f6', overflow: 'hidden', marginBottom: 20 },
-  tableHeader:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#f9fafb', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  headerCell:     { fontSize: 12, color: '#9ca3af', fontWeight: '500' },
-  tableRow:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10 },
-  rowBorder:      { borderTopWidth: 1, borderTopColor: '#f9fafb' },
-  catName:        { flex: 1, fontSize: 13, color: '#374151' },
-  amtInput:       { width: 100, textAlign: 'right', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, fontSize: 13, color: '#1f2937' },
-  amtReadonly:    { width: 100, textAlign: 'right', fontSize: 13, color: '#6b7280' },
-  saveRowBtn:     { backgroundColor: '#60a5fa', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  saveRowBtnText: { fontSize: 11, color: '#fff', fontWeight: '600' },
+  container:      { flex: 1, backgroundColor: colors.background.canvas },
+  tabBar:         { flexDirection: 'row', paddingHorizontal: spacing.base, paddingVertical: spacing.sm, backgroundColor: colors.background.surface, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  tab:            { paddingHorizontal: spacing.base, paddingVertical: spacing.xs, borderRadius: borderRadius.pill, marginRight: spacing.xs },
+  tabActive:      { backgroundColor: colors.primary[50] },
+  tabText:        { fontSize: typography.fontSize.md, color: colors.text.subtle, fontWeight: typography.fontWeight.medium },
+  tabTextActive:  { color: colors.primary[400] },
+  monthNav:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, backgroundColor: colors.background.surface, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  monthBtn:       { paddingHorizontal: spacing.base, paddingVertical: spacing.xs },
+  monthLabel:     { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.text.default, width: 180, textAlign: 'center' },
+  infoBanner:     { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, margin: spacing.md, padding: spacing.md, backgroundColor: '#fffbeb', borderRadius: borderRadius.md, borderWidth: 1, borderColor: '#fde68a' },
+  infoBannerText: { fontSize: typography.fontSize.sm, color: '#92400e', flex: 1 },
+  carryBtn:       { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.xs, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.md, backgroundColor: colors.background.surface },
+  carryBtnText:   { fontSize: typography.fontSize.sm, color: colors.text.muted },
+  card:           { backgroundColor: colors.background.surface, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border.subtle, overflow: 'hidden', marginBottom: spacing.base },
+  tableHeader:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.background.canvas, borderBottomWidth: 1, borderBottomColor: colors.border.subtle },
+  headerCell:     { fontSize: typography.fontSize['2xs'], color: colors.text.subtle, fontWeight: typography.fontWeight.medium },
+  tableRow:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  rowBorder:      { borderTopWidth: 1, borderTopColor: colors.background.canvas },
+  catName:        { flex: 1, fontSize: typography.fontSize.sm, color: colors.text.default },
+  amtInput:       { width: 100, textAlign: 'right', borderWidth: 1, borderColor: colors.border.soft, borderRadius: borderRadius.sm, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs / 2, fontSize: typography.fontSize.sm, color: colors.text.default },
+  amtReadonly:    { width: 100, textAlign: 'right', fontSize: typography.fontSize.sm, color: colors.text.muted },
+  saveRowBtn:     { backgroundColor: colors.primary[400], borderRadius: borderRadius.xs, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs / 2 },
+  saveRowBtnText: { fontSize: typography.fontSize.xs, color: colors.text.inverse, fontWeight: typography.fontWeight.semibold },
 });
